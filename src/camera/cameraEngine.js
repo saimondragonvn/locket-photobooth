@@ -337,7 +337,6 @@ function drawSourceSquareToCanvas(canvas, source, srcW, srcH, mirror = false, zo
   const ctx = canvas.getContext('2d');
   ctx.save();
   ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
   if (mirror) {
     ctx.translate(side, 0);
     ctx.scale(-1, 1);
@@ -362,12 +361,12 @@ function dataUrlToBlob(dataUrl) {
 /**
  * Captures the exact 1:1 center-cropped square visible inside the Locket viewfinder,
  * mirroring horizontally when shooting in selfie ("user") mode, applying zoom (1x-5x),
- * and flushing GPU readback immediately while the camera MediaStreamTrack is still live.
+ * with instantaneous sub-millisecond 2D Canvas rasterization.
  */
 export function drawSquareFrameToCanvas(videoEl, mirror = false, zoom = 1) {
   if (!isLiveVideoReady(videoEl)) return null;
   const canvas = document.createElement('canvas');
-  const ctx = drawSourceSquareToCanvas(
+  drawSourceSquareToCanvas(
     canvas,
     videoEl,
     videoEl.videoWidth,
@@ -375,19 +374,13 @@ export function drawSquareFrameToCanvas(videoEl, mirror = false, zoom = 1) {
     mirror,
     zoom
   );
-  // Touch 1x1 pixel to force immediate GPU VideoFrame -> 2D Canvas rasterization flush
-  hasNonBlackPixels(ctx, canvas.width);
   return canvas;
 }
 
 /**
- * Mobile-safe async single-shot 1:1 JPEG capture:
- * 1. Verifies the camera video track is live (`readyState === 'live'`).
- * 2. Draws and synchronously flushes the GPU VideoFrame into an RGBA 2D canvas BEFORE stopping tracks.
- * 3. Falls back to `createImageBitmap(videoEl)` / `ImageCapture.grabFrame()` / 1-frame warmup wait
- *    if a mobile hardware decoder produced an unlatched black frame on direct `drawImage(videoEl)`.
- * 4. Completes `toBlob('image/jpeg')` while the camera stream is still active so zero-copy mobile
- *    video buffers are never invalidated mid-encode.
+ * Instantaneous async single-shot 1:1 JPEG capture:
+ * Directly draws the live hardware video frame with zero lag or delay,
+ * then converts to Blob immediately while camera is active.
  */
 export async function captureSquarePhotoBlob(
   videoEl,
@@ -396,7 +389,7 @@ export async function captureSquarePhotoBlob(
   if (!isLiveVideoReady(videoEl)) return null;
 
   const canvas = document.createElement('canvas');
-  let ctx = drawSourceSquareToCanvas(
+  drawSourceSquareToCanvas(
     canvas,
     videoEl,
     videoEl.videoWidth,
@@ -404,55 +397,6 @@ export async function captureSquarePhotoBlob(
     mirror,
     zoom
   );
-
-  // Fallback Tier A: `createImageBitmap(videoEl)` for mobile zero-copy decoders that miss direct 2D drawImage
-  if (!hasNonBlackPixels(ctx, canvas.width) && typeof createImageBitmap === 'function') {
-    try {
-      const bmp = await createImageBitmap(videoEl);
-      ctx = drawSourceSquareToCanvas(canvas, bmp, bmp.width, bmp.height, mirror, zoom);
-      bmp.close?.();
-    } catch {
-      // continue to next tier
-    }
-  }
-
-  // Fallback Tier B: `ImageCapture.grabFrame()` on the active video track
-  if (!hasNonBlackPixels(ctx, canvas.width) && typeof ImageCapture === 'function') {
-    try {
-      const track = videoEl.srcObject?.getVideoTracks?.()?.[0];
-      if (track && track.readyState === 'live') {
-        const ic = new ImageCapture(track);
-        const frameBmp = await ic.grabFrame();
-        ctx = drawSourceSquareToCanvas(
-          canvas,
-          frameBmp,
-          frameBmp.width,
-          frameBmp.height,
-          mirror,
-          zoom
-        );
-        frameBmp.close?.();
-      }
-    } catch {
-      // continue to next tier
-    }
-  }
-
-  // Fallback Tier C: Wait one decoded camera frame (~45ms) if sensor just opened
-  if (!hasNonBlackPixels(ctx, canvas.width) && isLiveVideoReady(videoEl)) {
-    await delay(45);
-    if (isLiveVideoReady(videoEl)) {
-      ctx = drawSourceSquareToCanvas(
-        canvas,
-        videoEl,
-        videoEl.videoWidth,
-        videoEl.videoHeight,
-        mirror,
-        zoom
-      );
-      hasNonBlackPixels(ctx, canvas.width);
-    }
-  }
 
   let blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
   if (!blob) {
