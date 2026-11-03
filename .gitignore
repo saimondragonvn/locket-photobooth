@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build & Cache
+dist/
+.vite/
+*.tsbuildinfo
+
+# Android Gradle build & local SDK path
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.iml
+.idea/
+
+# Temporary / verification artifacts
+verify_*.mjs
+capture_*.mjs
+test_*.mjs
+*.png
+!public/**/*.png
+!android/**/*.png
+*.log
+.DS_Store
+Thumbs.db
+

@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/locket/:path*", "destination": "https://locket.elingo.app/locket/:path*" },
+    { "source": "/mediapipe/:path*", "destination": "https://locket-file.vercel.app/mediapipe/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

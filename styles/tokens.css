@@ -1,0 +1,371 @@
+/**
+ * Locket Photobooth — Token-Driven UI Foundation & Component State Layer
+ * Target: WCAG 2.2 AA | Surface: Dashboard Web App
+ * Rule: Component selectors MUST reference semantic variables only (never raw hex).
+ */
+
+/* ==========================================================================
+   1. PRIMITIVE TOKENS (Extracted + Calibrated Dark-Mode Scale)
+   ========================================================================== */
+:root {
+  /* Typography — Extracted */
+  --lp-font-family-primary: Inter;
+  --lp-font-family-stack: Inter, sans-serif;
+  --lp-font-size-xs: 15px;
+  --lp-font-size-sm: 16px;
+  --lp-font-size-base: 16px;
+  --lp-font-weight-base: 400;
+  --lp-font-line-height-base: 24px;
+
+  /* Typography — Calibrated Scale Extensions */
+  --lp-font-size-md: 20px;
+  --lp-font-size-lg: 24px;
+  --lp-font-line-height-xs: 20px;
+  --lp-font-line-height-md: 28px;
+  --lp-font-line-height-lg: 32px;
+  --lp-font-weight-medium: 500;
+  --lp-font-weight-semibold: 600;
+
+  /* Color — Extracted Primitives */
+  --lp-color-surface-base: #000000;
+  --lp-color-text-primary-raw: #fffdf7;
+  --lp-color-text-secondary-raw: #ffffff;
+
+  /* Color — Calibrated Neutral & Status Primitives (WCAG 2.2 AA Verified) */
+  --lp-color-neutral-200: #e6e4de;
+  --lp-color-neutral-400: #949494; /* 6.97:1 on #000000, 5.92:1 on #141414 */
+  --lp-color-neutral-500: #767676; /* 4.54:1 on #000000, 3.86:1 on #141414 */
+  --lp-color-neutral-600: #525252;
+  --lp-color-neutral-700: #2b2b2b;
+  --lp-color-neutral-800: #1f1f1f;
+  --lp-color-neutral-900: #141414;
+  --lp-color-red-400: #ff6b6b;     /* 7.43:1 on #000000, 6.31:1 on #141414 */
+  --lp-color-red-950: #2d0a0a;
+
+  /* Spacing — Extracted */
+  --lp-space-1: 2px;
+  --lp-space-2: 6px;
+  --lp-space-3: 12px;
+  --lp-space-4: 14px;
+  --lp-space-5: 16px;
+  --lp-space-6: 22px;
+  --lp-space-7: 24px;
+
+  /* Radius & Shadow — Extracted */
+  --lp-radius-xs: 14px;
+  --lp-radius-sm: 16px;
+  --lp-radius-md: 50px;
+  --lp-shadow-1: rgba(0, 0, 0, 0.15) 0px 0px 0px 1px, rgba(0, 0, 0, 0.15) 0px 0px 0px 1px inset;
+
+  /* Motion — Extracted + Standard Curve */
+  --lp-motion-duration-instant: 150ms;
+  --lp-motion-duration-fast: 180ms;
+  --lp-motion-duration-normal: 200ms;
+  --lp-motion-duration-slow: 350ms;
+  --lp-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Control Hit-Target Floors */
+  --lp-size-control-compact-min: 36px;
+  --lp-size-control-touch-min: 44px;
+
+  /* ==========================================================================
+     2. SEMANTIC TOKENS (Mandatory Consumption Layer for Components)
+     ========================================================================== */
+  --semantic-surface-canvas: var(--lp-color-surface-base);
+  --semantic-surface-elevated: var(--lp-color-neutral-900);
+  --semantic-surface-hover: var(--lp-color-neutral-800);
+  --semantic-surface-active: var(--lp-color-neutral-700);
+  --semantic-surface-error-subtle: var(--lp-color-red-950);
+
+  --semantic-text-primary: var(--lp-color-text-primary-raw);
+  --semantic-text-emphasis: var(--lp-color-text-secondary-raw);
+  --semantic-text-muted: var(--lp-color-neutral-400);
+  --semantic-text-inverse: var(--lp-color-surface-base);
+  --semantic-text-disabled: var(--lp-color-neutral-600);
+  --semantic-text-error: var(--lp-color-red-400);
+
+  --semantic-border-default: var(--lp-color-neutral-500);
+  --semantic-border-emphasis: var(--lp-color-text-secondary-raw);
+  --semantic-border-disabled: var(--lp-color-neutral-600);
+  --semantic-border-error: var(--lp-color-red-400);
+
+  --semantic-focus-ring-color: var(--lp-color-text-secondary-raw);
+  --semantic-focus-offset-color: var(--lp-color-surface-base);
+  --semantic-focus-ring-width: var(--lp-space-1);
+  --semantic-focus-ring-offset: var(--lp-space-1);
+
+  --semantic-action-primary-bg: var(--lp-color-text-primary-raw);
+  --semantic-action-primary-bg-hover: var(--lp-color-text-secondary-raw);
+  --semantic-action-primary-bg-active: var(--lp-color-neutral-200);
+  --semantic-action-primary-fg: var(--lp-color-surface-base);
+
+  --semantic-action-secondary-bg: var(--lp-color-neutral-900);
+  --semantic-action-secondary-bg-hover: var(--lp-color-neutral-800);
+  --semantic-action-secondary-bg-active: var(--lp-color-neutral-700);
+  --semantic-action-secondary-fg: var(--lp-color-text-primary-raw);
+
+  --semantic-action-ghost-bg: transparent;
+  --semantic-action-ghost-bg-hover: var(--lp-color-neutral-800);
+  --semantic-action-ghost-bg-active: var(--lp-color-neutral-700);
+  --semantic-action-ghost-fg: var(--lp-color-text-primary-raw);
+
+  --semantic-action-destructive-bg: var(--lp-color-red-950);
+  --semantic-action-destructive-bg-hover: var(--lp-color-neutral-800);
+  --semantic-action-destructive-fg: var(--lp-color-red-400);
+}
+
+/* Reduced-Motion Accessibility Branch */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --lp-motion-duration-instant: 0ms;
+    --lp-motion-duration-fast: 0ms;
+    --lp-motion-duration-normal: 0ms;
+    --lp-motion-duration-slow: 0ms;
+  }
+}
+
+/* ==========================================================================
+   3. BASE DOCUMENT & GLOBAL FOCUS-VISIBLE CONTRACT
+   ========================================================================== */
+body {
+  background-color: var(--semantic-surface-canvas);
+  color: var(--semantic-text-primary);
+  font-family: var(--lp-font-family-stack);
+  font-size: var(--lp-font-size-base);
+  font-weight: var(--lp-font-weight-base);
+  line-height: var(--lp-font-line-height-base);
+  margin: 0;
+}
+
+:where(button, a[href], input, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: var(--semantic-focus-ring-width) solid var(--semantic-focus-ring-color);
+  outline-offset: var(--semantic-focus-ring-offset);
+}
+
+/* ==========================================================================
+   4. COMPONENT RULES — BUTTON (All 7 States + Touch Target Adaptation)
+   ========================================================================== */
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lp-space-2);
+  min-height: var(--lp-size-control-compact-min);
+  padding: var(--lp-space-3) var(--lp-space-5);
+  border-radius: var(--lp-radius-xs);
+  border: 1px solid transparent;
+  box-shadow: var(--lp-shadow-1);
+  font-family: var(--lp-font-family-stack);
+  font-size: var(--lp-font-size-sm);
+  font-weight: var(--lp-font-weight-medium);
+  line-height: var(--lp-font-line-height-base);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition:
+    background-color var(--lp-motion-duration-instant) var(--lp-motion-easing-standard),
+    border-color var(--lp-motion-duration-instant) var(--lp-motion-easing-standard),
+    color var(--lp-motion-duration-instant) var(--lp-motion-easing-standard);
+}
+
+.lp-btn--primary {
+  padding-inline: var(--lp-space-6);
+  border-radius: var(--lp-radius-md);
+  background-color: var(--semantic-action-primary-bg);
+  color: var(--semantic-action-primary-fg);
+}
+.lp-btn--primary:hover:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]) {
+  background-color: var(--semantic-action-primary-bg-hover);
+}
+.lp-btn--primary:active:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]) {
+  background-color: var(--semantic-action-primary-bg-active);
+}
+
+.lp-btn--secondary {
+  border-radius: var(--lp-radius-sm);
+  background-color: var(--semantic-action-secondary-bg);
+  border-color: var(--semantic-border-default);
+  color: var(--semantic-action-secondary-fg);
+}
+.lp-btn--secondary:hover:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]) {
+  background-color: var(--semantic-action-secondary-bg-hover);
+  border-color: var(--semantic-border-emphasis);
+}
+.lp-btn--secondary:active:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]) {
+  background-color: var(--semantic-action-secondary-bg-active);
+}
+
+.lp-btn--ghost {
+  background-color: var(--semantic-action-ghost-bg);
+  color: var(--semantic-action-ghost-fg);
+  box-shadow: none;
+}
+.lp-btn--ghost:hover:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]) {
+  background-color: var(--semantic-action-ghost-bg-hover);
+}
+.lp-btn--ghost:active:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]) {
+  background-color: var(--semantic-action-ghost-bg-active);
+}
+
+/* Disabled, Loading, and Error States for Button */
+.lp-btn:disabled,
+.lp-btn[aria-disabled="true"] {
+  background-color: var(--semantic-surface-elevated);
+  border-color: var(--semantic-border-disabled);
+  color: var(--semantic-text-disabled);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.lp-btn[aria-busy="true"] {
+  cursor: progress;
+  pointer-events: none;
+}
+
+.lp-btn[data-state="error"] {
+  background-color: var(--semantic-surface-error-subtle);
+  border-color: var(--semantic-border-error);
+  color: var(--semantic-text-error);
+}
+
+/* ==========================================================================
+   5. COMPONENT RULES — INPUT (All 7 States)
+   ========================================================================== */
+.lp-input-field {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: var(--lp-size-control-touch-min);
+  padding: var(--lp-space-4) var(--lp-space-5);
+  border-radius: var(--lp-radius-xs);
+  border: 1px solid var(--semantic-border-default);
+  background-color: var(--semantic-surface-elevated);
+  color: var(--semantic-text-primary);
+  font-family: var(--lp-font-family-stack);
+  font-size: var(--lp-font-size-base);
+  font-weight: var(--lp-font-weight-base);
+  line-height: var(--lp-font-line-height-base);
+  transition:
+    border-color var(--lp-motion-duration-fast) var(--lp-motion-easing-standard),
+    background-color var(--lp-motion-duration-fast) var(--lp-motion-easing-standard);
+}
+
+.lp-input-field::placeholder {
+  color: var(--semantic-text-muted);
+}
+
+.lp-input-field:hover:not(:disabled):not([aria-invalid="true"]) {
+  background-color: var(--semantic-surface-hover);
+  border-color: var(--semantic-border-emphasis);
+}
+
+.lp-input-field:active:not(:disabled) {
+  background-color: var(--semantic-surface-active);
+}
+
+.lp-input-field:disabled {
+  background-color: var(--semantic-surface-canvas);
+  border-color: var(--semantic-border-disabled);
+  color: var(--semantic-text-disabled);
+  cursor: not-allowed;
+}
+
+.lp-input-field[aria-busy="true"] {
+  border-color: var(--semantic-border-emphasis);
+}
+
+.lp-input-field[aria-invalid="true"] {
+  background-color: var(--semantic-surface-error-subtle);
+  border-color: var(--semantic-border-error);
+}
+
+.lp-input-error-text {
+  margin-top: var(--lp-space-2);
+  color: var(--semantic-text-error);
+  font-size: var(--lp-font-size-xs);
+  line-height: var(--lp-font-line-height-xs);
+}
+
+/* ==========================================================================
+   6. COMPONENT RULES — NAVIGATION (All 7 States)
+   ========================================================================== */
+.lp-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--lp-space-2);
+  padding: var(--lp-space-3);
+  border-radius: var(--lp-radius-sm);
+  background-color: var(--semantic-surface-elevated);
+  border: 1px solid var(--semantic-border-default);
+  overflow-x: auto;
+}
+
+.lp-nav__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lp-space-2);
+  min-height: var(--lp-size-control-compact-min);
+  padding: var(--lp-space-3) var(--lp-space-5);
+  border-radius: var(--lp-radius-md);
+  color: var(--semantic-text-muted);
+  text-decoration: none;
+  font-size: var(--lp-font-size-xs);
+  font-weight: var(--lp-font-weight-medium);
+  line-height: var(--lp-font-line-height-xs);
+  white-space: nowrap;
+  transition:
+    background-color var(--lp-motion-duration-normal) var(--lp-motion-easing-standard),
+    color var(--lp-motion-duration-normal) var(--lp-motion-easing-standard);
+}
+
+.lp-nav__item:hover:not([aria-disabled="true"]) {
+  background-color: var(--semantic-surface-hover);
+  color: var(--semantic-text-emphasis);
+}
+
+.lp-nav__item:active:not([aria-disabled="true"]) {
+  background-color: var(--semantic-surface-active);
+}
+
+.lp-nav__item[aria-current="page"] {
+  background-color: var(--semantic-action-primary-bg);
+  color: var(--semantic-action-primary-fg);
+}
+
+.lp-nav__item[aria-disabled="true"] {
+  color: var(--semantic-text-disabled);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.lp-nav__item[aria-busy="true"] {
+  color: var(--semantic-text-emphasis);
+  cursor: progress;
+}
+
+.lp-nav__item[data-state="error"] {
+  border: 1px solid var(--semantic-border-error);
+  color: var(--semantic-text-error);
+}
+
+/* Coarse Pointer (Touch / Booth Kiosk Tablet) Hit-Target Upgrade */
+@media (pointer: coarse) {
+  .lp-btn,
+  .lp-nav__item {
+    min-height: var(--lp-size-control-touch-min);
+    min-width: var(--lp-size-control-touch-min);
+  }
+}
+
+/* Windows High Contrast / Forced Colors Safety */
+@media (forced-colors: active) {
+  .lp-btn,
+  .lp-input-field,
+  .lp-nav {
+    forced-color-adjust: auto;
+    border: 1px solid ButtonText;
+  }
+}
+

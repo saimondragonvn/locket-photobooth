@@ -1,0 +1,5 @@
+import { registerModules } from '../runtime/moduleRegistry.js';
+
+registerModules({
+  5525: (e,t,n)=>{"use strict";n.d(t,{G:()=>u,N:()=>c});var r=n(5043);const a=()=>"undefined"!==typeof navigator&&/iphone|ipad|ipod/i.test(navigator.userAgent);let o=null,l=!1;const i=new Set,s=()=>i.forEach((e=>e())),u=()=>{"undefined"!==typeof window&&(window.addEventListener("beforeinstallprompt",(e=>{e.preventDefault(),o=e,s()})),window.addEventListener("appinstalled",(()=>{o=null,l=!0,s()})))},c=()=>{const[,e]=(0,r.useState)(0);(0,r.useEffect)((()=>{const t=()=>e((e=>e+1));return i.add(t),()=>i.delete(t)}),[]);const t=(0,r.useCallback)((async()=>{const e=o;if(!e)return!1;e.prompt();const t=await e.userChoice.catch((()=>null));return o=null,s(),"accepted"===(null===t||void 0===t?void 0:t.outcome)}),[]),n=l||"undefined"!==typeof window&&window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches||"undefined"!==typeof navigator&&!0===navigator.standalone;return{installed:n,canInstall:!!o,isIOS:a(),isAndroid:"undefined"!==typeof navigator&&/android/i.test(navigator.userAgent),needsIosGuide:a()&&!n,promptInstall:t}}},
+});

@@ -1,0 +1,5 @@
+import { registerModules } from '../runtime/moduleRegistry.js';
+
+registerModules({
+  8785: (e,t,n)=>{"use strict";n.d(t,{L4:()=>d,Ri:()=>a,TV:()=>r,UW:()=>i,Yj:()=>o,hZ:()=>c,yN:()=>s,ym:()=>u});const r=(e,t,n)=>{const r=new Date;r.setTime(r.getTime()+60*n*60*1e3);const a=`expires=${r.toUTCString()}`;document.cookie=`${e}=${encodeURIComponent(t)}; ${a}; path=/`},a=e=>{const t=`${e}=`,n=document.cookie.split(";");for(const r of n){const e=r.trim();if(e.startsWith(t))return decodeURIComponent(e.substring(t.length,e.length))}return null},o=e=>{document.cookie=`${e}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`},l={},i=(e,t)=>{const n=JSON.stringify(t);try{localStorage.setItem(e,n)}catch(r){l[e]=n}},s=e=>{try{let t=localStorage.getItem(e);return null===t&&void 0!==l[e]&&(t=l[e]),t?JSON.parse(t):null}catch(t){const n=l[e];return n?JSON.parse(n):null}},u=e=>{try{localStorage.removeItem(e)}catch(t){}delete l[e]},c=(e,t)=>{try{localStorage.setItem(e,t)}catch(n){l[e]=t}},d=e=>{try{let t=localStorage.getItem(e);return null===t&&void 0!==l[e]&&(t=l[e]),t}catch(t){return l[e]||null}}},
+});

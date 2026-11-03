@@ -1,0 +1,40 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'app.locket.photobooth'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "app.locket.photobooth"
+        minSdk 24
+        targetSdk 35
+        versionCode 200
+        versionName "2.0.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.debug
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    aaptOptions {
+        noCompress "wasm", "task", "tflite", "bin", "mp4", "webm"
+    }
+}
+
+dependencies {
+}
+

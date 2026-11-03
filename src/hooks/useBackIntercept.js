@@ -1,0 +1,5 @@
+import { registerModules } from '../runtime/moduleRegistry.js';
+
+registerModules({
+  8536: (e,t,n)=>{"use strict";n.d(t,{q:()=>h});var a=n(5043);const i=[];let o=!1,l=0,s=!1;const r=()=>{var e;return Number(null===(e=window.history.state)||void 0===e?void 0:e.backDepth)||0},c=()=>{if(s=!1,o)return;for(let n=i.length-1;n>=0;n--)i[n].path!==window.location.pathname&&i.splice(n,1);const e=i.length;let t=r();if(t>e)return o=!0,clearTimeout(l),l=setTimeout((()=>{o=!1,c()}),1500),void window.history.go(e-t);for(;t<e;)t+=1,window.history.pushState({...window.history.state||{},backDepth:t},"")},d=()=>{s||(s=!0,Promise.resolve().then(c))},u=()=>{if(o)return o=!1,clearTimeout(l),void c();const e=r();for(;i.length>e;){const e=i.pop();if(!1===e.onBack()){i.push(e);break}}c()};"undefined"!==typeof window&&(window.addEventListener("popstate",u),r()>0&&d());const h=(e,t)=>{const n=(0,a.useRef)(t);n.current=t,(0,a.useEffect)((()=>{if(!e)return;const t={onBack:()=>{var e;return null===(e=n.current)||void 0===e?void 0:e.call(n)},path:window.location.pathname};return i.push(t),d(),()=>{const e=i.indexOf(t);e<0||(i.splice(e,1),d())}}),[e])}},
+});
