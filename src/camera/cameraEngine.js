@@ -325,9 +325,10 @@ function clampZoomFactor(zoom) {
 }
 
 function drawSourceSquareToCanvas(canvas, source, srcW, srcH, mirror = false, zoom = 1) {
-  const side = Math.min(srcW, srcH);
+  const rawSide = Math.min(srcW, srcH);
+  const side = Math.min(rawSide, 1080);
   const z = clampZoomFactor(zoom);
-  const cropSide = side / z;
+  const cropSide = rawSide / z;
   const sx = (srcW - cropSide) / 2;
   const sy = (srcH - cropSide) / 2;
   if (canvas.width !== side || canvas.height !== side) {

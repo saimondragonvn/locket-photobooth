@@ -59,6 +59,7 @@ public class MainActivity extends Activity {
         Window window = getWindow();
         if (window != null) {
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            window.addFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
             window.setStatusBarColor(Color.parseColor("#0D0D0F"));
             window.setNavigationBarColor(Color.parseColor("#0D0D0F"));
         }
@@ -70,6 +71,10 @@ public class MainActivity extends Activity {
 
         webView = new WebView(this);
         webView.setBackgroundColor(Color.parseColor("#0D0D0F"));
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
+        }
         root.addView(webView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -88,6 +93,8 @@ public class MainActivity extends Activity {
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
+        settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        settings.setOffscreenPreRaster(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
