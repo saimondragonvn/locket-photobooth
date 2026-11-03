@@ -65,21 +65,39 @@ function isHardwareBusy(err) {
   return err?.name === 'NotReadableError' || err?.name === 'TrackStartError' || err?.name === 'AbortError';
 }
 
+export const TRANSPARENT_VIDEO_POSTER =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
 /**
  * Attaches a live MediaStream to a <video> element with full iOS Safari & Android WebView attributes.
  */
 export function attachStreamToVideo(videoEl, stream) {
   if (!videoEl) return;
+  videoEl.poster = TRANSPARENT_VIDEO_POSTER;
+  videoEl.setAttribute('poster', TRANSPARENT_VIDEO_POSTER);
   videoEl.muted = true;
   videoEl.defaultMuted = true;
   videoEl.playsInline = true;
   videoEl.autoplay = true;
+  videoEl. controls = false;
   videoEl.setAttribute('playsinline', '');
   videoEl.setAttribute('webkit-playsinline', '');
   videoEl.setAttribute('muted', '');
   videoEl.srcObject = stream;
   if (typeof videoEl.play === 'function') {
     videoEl.play().catch(() => {});
+  }
+}
+
+export function detachStreamFromVideo(videoEl) {
+  if (!videoEl) return;
+  try {
+    videoEl.poster = TRANSPARENT_VIDEO_POSTER;
+    videoEl.setAttribute('poster', TRANSPARENT_VIDEO_POSTER);
+    videoEl.pause?.();
+    videoEl.srcObject = null;
+  } catch {
+    // ignore
   }
 }
 
@@ -300,21 +318,31 @@ function hasNonBlackPixels(ctx, side) {
   }
 }
 
-function drawSourceSquareToCanvas(canvas, source, srcW, srcH, mirror = false) {
+function clampZoomFactor(zoom) {
+  const z = Number(zoom);
+  if (!Number.isFinite(z) || z <= 1) return 1;
+  return Math.min(5, Math.max(1, z));
+}
+
+function drawSourceSquareToCanvas(canvas, source, srcW, srcH, mirror = false, zoom = 1) {
   const side = Math.min(srcW, srcH);
-  const sx = (srcW - side) / 2;
-  const sy = (srcH - side) / 2;
+  const z = clampZoomFactor(zoom);
+  const cropSide = side / z;
+  const sx = (srcW - cropSide) / 2;
+  const sy = (srcH - cropSide) / 2;
   if (canvas.width !== side || canvas.height !== side) {
     canvas.width = side;
     canvas.height = side;
   }
   const ctx = canvas.getContext('2d');
   ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   if (mirror) {
     ctx.translate(side, 0);
     ctx.scale(-1, 1);
   }
-  ctx.drawImage(source, sx, sy, side, side, 0, 0, side, side);
+  ctx.drawImage(source, sx, sy, cropSide, cropSide, 0, 0, side, side);
   ctx.restore();
   return ctx;
 }
@@ -333,10 +361,10 @@ function dataUrlToBlob(dataUrl) {
 
 /**
  * Captures the exact 1:1 center-cropped square visible inside the Locket viewfinder,
- * mirroring horizontally when shooting in selfie ("user") mode, and flushes GPU readback
- * immediately while the camera MediaStreamTrack is still live.
+ * mirroring horizontally when shooting in selfie ("user") mode, applying zoom (1x-5x),
+ * and flushing GPU readback immediately while the camera MediaStreamTrack is still live.
  */
-export function drawSquareFrameToCanvas(videoEl, mirror = false) {
+export function drawSquareFrameToCanvas(videoEl, mirror = false, zoom = 1) {
   if (!isLiveVideoReady(videoEl)) return null;
   const canvas = document.createElement('canvas');
   const ctx = drawSourceSquareToCanvas(
@@ -344,7 +372,8 @@ export function drawSquareFrameToCanvas(videoEl, mirror = false) {
     videoEl,
     videoEl.videoWidth,
     videoEl.videoHeight,
-    mirror
+    mirror,
+    zoom
   );
   // Touch 1x1 pixel to force immediate GPU VideoFrame -> 2D Canvas rasterization flush
   hasNonBlackPixels(ctx, canvas.width);
@@ -362,7 +391,7 @@ export function drawSquareFrameToCanvas(videoEl, mirror = false) {
  */
 export async function captureSquarePhotoBlob(
   videoEl,
-  { mirror = false, quality = 0.92 } = {}
+  { mirror = false, quality = 0.92, zoom = 1 } = {}
 ) {
   if (!isLiveVideoReady(videoEl)) return null;
 
@@ -372,14 +401,15 @@ export async function captureSquarePhotoBlob(
     videoEl,
     videoEl.videoWidth,
     videoEl.videoHeight,
-    mirror
+    mirror,
+    zoom
   );
 
   // Fallback Tier A: `createImageBitmap(videoEl)` for mobile zero-copy decoders that miss direct 2D drawImage
   if (!hasNonBlackPixels(ctx, canvas.width) && typeof createImageBitmap === 'function') {
     try {
       const bmp = await createImageBitmap(videoEl);
-      ctx = drawSourceSquareToCanvas(canvas, bmp, bmp.width, bmp.height, mirror);
+      ctx = drawSourceSquareToCanvas(canvas, bmp, bmp.width, bmp.height, mirror, zoom);
       bmp.close?.();
     } catch {
       // continue to next tier
@@ -398,7 +428,8 @@ export async function captureSquarePhotoBlob(
           frameBmp,
           frameBmp.width,
           frameBmp.height,
-          mirror
+          mirror,
+          zoom
         );
         frameBmp.close?.();
       }
@@ -416,7 +447,8 @@ export async function captureSquarePhotoBlob(
         videoEl,
         videoEl.videoWidth,
         videoEl.videoHeight,
-        mirror
+        mirror,
+        zoom
       );
       hasNonBlackPixels(ctx, canvas.width);
     }
@@ -473,11 +505,11 @@ export function pickOptimalRecorderOptions(stream) {
 }
 
 export function createMirroredSquareVideoTrack(
-  videoEl,
-  { mirror = true, maxSide = RECORD_MAX_SIDE, fps = TARGET_FPS } = {}
+  sourceEl,
+  { mirror = true, maxSide = RECORD_MAX_SIDE, fps = TARGET_FPS, zoomGetter = null } = {}
 ) {
-  const vw0 = videoEl?.videoWidth;
-  const vh0 = videoEl?.videoHeight;
+  const vw0 = sourceEl?.videoWidth || sourceEl?.width || 0;
+  const vh0 = sourceEl?.videoHeight || sourceEl?.height || 0;
   if (!vw0 || !vh0) return null;
 
   const outSide = Math.min(Math.min(vw0, vh0), maxSide);
@@ -485,6 +517,7 @@ export function createMirroredSquareVideoTrack(
   canvas.width = outSide;
   canvas.height = outSide;
   const ctx = canvas.getContext('2d', { alpha: false });
+  ctx.imageSmoothingEnabled = true;
   if (mirror) {
     ctx.setTransform(-1, 0, 0, 1, outSide, 0);
   }
@@ -504,12 +537,18 @@ export function createMirroredSquareVideoTrack(
   };
 
   const draw = (now) => {
-    const vw = videoEl.videoWidth;
-    const vh = videoEl.videoHeight;
+    const vw = sourceEl.videoWidth || sourceEl.width || 0;
+    const vh = sourceEl.videoHeight || sourceEl.height || 0;
     if (!vw || !vh) return;
     const side = Math.min(vw, vh);
-    ctx.drawImage(videoEl, (vw - side) / 2, (vh - side) / 2, side, side, 0, 0, outSide, outSide);
-    lastVideoTime = videoEl.currentTime;
+    const z = clampZoomFactor(typeof zoomGetter === 'function' ? zoomGetter() : 1);
+    const cropSide = side / z;
+    const sx = (vw - cropSide) / 2;
+    const sy = (vh - cropSide) / 2;
+    ctx.drawImage(sourceEl, sx, sy, cropSide, cropSide, 0, 0, outSide, outSide);
+    if (typeof sourceEl.currentTime === 'number') {
+      lastVideoTime = sourceEl.currentTime;
+    }
     lastDrawAt = now;
     stats.frames += 1;
   };
@@ -517,8 +556,9 @@ export function createMirroredSquareVideoTrack(
   const pump = (now) => {
     if (!active) return;
     const t = typeof now === 'number' ? now : performance.now();
-    const curTime = videoEl.currentTime;
-    if (curTime !== lastVideoTime || t - lastDrawAt >= maxGapMs) {
+    const isVideo = typeof sourceEl.currentTime === 'number';
+    const curTime = isVideo ? sourceEl.currentTime : -1;
+    if (!isVideo || curTime !== lastVideoTime || t - lastDrawAt >= maxGapMs) {
       draw(t);
     }
     handle = requestAnimationFrame(pump);

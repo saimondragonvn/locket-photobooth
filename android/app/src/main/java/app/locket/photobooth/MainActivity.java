@@ -7,6 +7,7 @@ import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -114,6 +115,12 @@ public class MainActivity extends Activity {
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public Bitmap getDefaultVideoPoster() {
+                // Prevent Android WebView from displaying the default grey box with black play triangle
+                return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888);
+            }
+
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> {
