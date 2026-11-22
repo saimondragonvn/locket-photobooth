@@ -1,0 +1,589 @@
+/* ==========================================================================
+   Locket Photobooth v2.4.0 Enhancements
+   1. Depth Text ("Chèn chữ sau chủ thể") Editor UI
+   2. Real-Time Emote Reaction & Message Notification Banner
+   3. 60fps GPU-Composited Smoothness & Scroll Optimizations
+   ========================================================================== */
+
+/* --- 60fps Smoothness & Rendering Optimizations --- */
+.MomentFeed_page__iY818 {
+  contain: layout style;
+}
+
+.MomentFeed_card__0nvaV,
+.Upload_viewfinder__idkkX,
+.MomentGrid_tile__Q9-Vz {
+  contain: layout paint;
+  transform: translateZ(0);
+}
+
+.MomentFeed_feed__sRke-,
+.Dashboard_stage__Z0Ip2,
+.Chat_messages__-DouZ,
+.BoothSheet_frame-groups__rcfBd {
+  scroll-behavior: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.MomentAmbient_photo__lbHH2 {
+  will-change: opacity;
+  transform: translateZ(0);
+}
+
+/* Floating Depth Text ("T") button on Upload preview viewfinder */
+.lk-depth-trigger {
+  align-items: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 5px;
+  height: 36px;
+  left: 20px;
+  padding: 0 12px;
+  position: absolute;
+  top: 20px;
+  transition: transform 0.14s ease, background 0.14s ease;
+  z-index: 3;
+}
+
+.lk-depth-trigger:active {
+  transform: scale(0.93);
+}
+
+.lk-depth-trigger:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.lk-depth-trigger-icon {
+  align-items: center;
+  background: var(--accent-grad, linear-gradient(135deg, #ffe27a, #f6c453));
+  border-radius: 6px;
+  color: #161618;
+  display: inline-flex;
+  font-family: 'Anton', Impact, sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  height: 20px;
+  justify-content: center;
+  width: 20px;
+}
+
+/* --- Depth Text Editor Fullscreen Sheet --- */
+.lk-depth-backdrop {
+  align-items: flex-end;
+  animation: lkFadeIn 0.16s ease-out;
+  background: rgba(0, 0, 0, 0.86);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 650;
+}
+
+.lk-depth-sheet {
+  animation: lkSlideUp 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  background: #141417;
+  border-radius: 26px 26px 0 0;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  height: min(96dvh, 860px);
+  max-width: 520px;
+  overflow: hidden;
+  padding-bottom: var(--safe-bottom, 0px);
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .lk-depth-backdrop {
+    align-items: center;
+    padding: 16px;
+  }
+  .lk-depth-sheet {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 26px;
+    height: min(90dvh, 820px);
+  }
+}
+
+.lk-depth-head {
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-shrink: 0;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.lk-depth-title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+.lk-depth-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 7px 14px;
+}
+
+.lk-depth-apply {
+  background: var(--accent-grad, linear-gradient(135deg, #ffe27a, #f6c453));
+  border: none;
+  border-radius: 999px;
+  color: #161618;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 7px 16px;
+}
+
+.lk-depth-apply:disabled,
+.lk-depth-cancel:disabled {
+  opacity: 0.45;
+}
+
+.lk-depth-stage {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  padding: 10px 14px 6px;
+  position: relative;
+}
+
+.lk-depth-canvas {
+  aspect-ratio: 1 / 1;
+  background: #0a0a0c;
+  border-radius: 24px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  cursor: grab;
+  display: block;
+  max-height: min(44dvh, 340px);
+  max-width: min(100%, 340px);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  width: 100%;
+}
+
+.lk-depth-canvas:active {
+  cursor: grabbing;
+}
+
+.lk-depth-status {
+  align-items: center;
+  background: rgba(18, 18, 22, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  bottom: 14px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 11.5px;
+  font-weight: 700;
+  gap: 6px;
+  left: 50%;
+  max-width: calc(100% - 40px);
+  padding: 5px 11px;
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.lk-depth-status.ready {
+  color: #9ef7c1;
+}
+
+.lk-depth-status.error {
+  color: #ff9a92;
+}
+
+.lk-depth-status button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+}
+
+.lk-depth-spin {
+  animation: lkSpin 0.7s linear infinite;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  border-top-color: #f6c453;
+  height: 12px;
+  width: 12px;
+}
+
+.lk-depth-layer-pill {
+  background: rgba(18, 18, 22, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 5px 11px;
+  position: absolute;
+  right: 22px;
+  top: 18px;
+}
+
+.lk-depth-layer-pill.on {
+  background: rgba(246, 196, 83, 0.92);
+  border-color: transparent;
+  color: #161618;
+}
+
+.lk-depth-tabs {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+  margin: 6px 14px 8px;
+  padding: 3px;
+}
+
+.lk-depth-tab {
+  background: transparent;
+  border: none;
+  border-radius: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 700;
+  height: 34px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.lk-depth-tab.on {
+  background: #fff;
+  color: #141417;
+}
+
+.lk-depth-controls {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 14px 16px;
+}
+
+.lk-depth-input-row {
+  align-items: stretch;
+  display: flex;
+  gap: 8px;
+}
+
+.lk-depth-textarea {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  color: #fff;
+  flex: 1;
+  font-size: 15px;
+  font-weight: 700;
+  outline: none;
+  padding: 9px 12px;
+  resize: none;
+}
+
+.lk-depth-textarea:focus {
+  border-color: var(--accent, #f6c453);
+}
+
+.lk-depth-mini-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  width: 48px;
+}
+
+.lk-depth-mini-btn.on {
+  background: #fff;
+  color: #141417;
+}
+
+.lk-depth-label {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: -4px;
+}
+
+.lk-depth-scroll-row {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.lk-depth-scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
+.lk-depth-chip {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 13px;
+  white-space: nowrap;
+}
+
+.lk-depth-chip.on {
+  background: #fff;
+  border-color: #fff;
+  color: #141417;
+}
+
+.lk-depth-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lk-depth-swatch {
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  cursor: pointer;
+  height: 32px;
+  padding: 0;
+  transition: transform 0.14s ease;
+  width: 32px;
+}
+
+.lk-depth-swatch.on {
+  box-shadow: 0 0 0 2px #141417, 0 0 0 4.5px var(--accent, #f6c453);
+  transform: scale(1.08);
+}
+
+.lk-depth-color-pick {
+  align-items: center;
+  background: conic-gradient(#ff5c5c, #ffe27a, #64f5a8, #58b8ff, #d46cff, #ff5c5c);
+  color: #141417;
+  display: inline-flex;
+  font-size: 16px;
+  font-weight: 900;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.lk-depth-color-pick input {
+  cursor: pointer;
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+}
+
+.lk-depth-slider {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.lk-depth-slider span {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 700;
+  width: 78px;
+}
+
+.lk-depth-slider input {
+  accent-color: var(--accent, #f6c453);
+  flex: 1;
+  min-width: 0;
+}
+
+.lk-depth-slider b {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  width: 38px;
+}
+
+.lk-depth-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+/* --- Real-Time Floating In-App Notification Banner --- */
+.lk-notif-wrap {
+  display: flex;
+  justify-content: center;
+  left: 0;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 0;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 900;
+}
+
+.lk-notif-card {
+  align-items: center;
+  animation: lkNotifDrop 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  backdrop-filter: blur(18px) saturate(1.6);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  background: rgba(28, 28, 34, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.52);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  gap: 11px;
+  max-width: 420px;
+  padding: 10px 12px 10px 10px;
+  pointer-events: auto;
+  transform: translateZ(0);
+  width: 100%;
+  will-change: transform, opacity;
+}
+
+.lk-notif-avatar-box {
+  flex-shrink: 0;
+  height: 42px;
+  position: relative;
+  width: 42px;
+}
+
+.lk-notif-avatar {
+  border-radius: 50%;
+  height: 42px;
+  object-fit: cover;
+  width: 42px;
+}
+
+.lk-notif-fallback {
+  align-items: center;
+  background: rgba(246, 196, 83, 0.22);
+  display: flex;
+  font-size: 20px;
+  justify-content: center;
+}
+
+.lk-notif-badge {
+  align-items: center;
+  background: #141417;
+  border-radius: 50%;
+  bottom: -2px;
+  display: flex;
+  font-size: 13px;
+  height: 20px;
+  justify-content: center;
+  position: absolute;
+  right: -2px;
+  width: 20px;
+}
+
+.lk-notif-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lk-notif-title {
+  font-size: 14px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lk-notif-sub {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lk-notif-close {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 18px;
+  height: 28px;
+  justify-content: center;
+  line-height: 1;
+  width: 28px;
+}
+
+@keyframes lkNotifDrop {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -24px, 0) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes lkFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes lkSlideUp {
+  0% {
+    opacity: 0.5;
+    transform: translate3d(0, 32px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes lkSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

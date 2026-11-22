@@ -10,6 +10,7 @@ import './styles/profile.css';
 import './styles/donate.css';
 import './styles/cards.css';
 import './styles/legal.css';
+import './styles/v24-enhancements.css';
 
 // 2. Core Runtime, Config, Assets, Services, Hooks, Utils & Primitives
 import React from 'react';

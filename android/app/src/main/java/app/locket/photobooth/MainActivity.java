@@ -4,6 +4,8 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.DownloadManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -65,6 +67,7 @@ public class MainActivity extends Activity {
         }
 
         requestCameraAndAudioPermissionsIfNeeded();
+        ensureNotificationChannel();
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.parseColor("#0D0D0F"));
@@ -221,6 +224,35 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void ensureNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                if (nm != null) {
+                    NotificationChannel ch = new NotificationChannel(
+                            NativeWidgetBridge.NOTIF_CHANNEL_ID,
+                            "Thông báo Locket",
+                            NotificationManager.IMPORTANCE_HIGH
+                    );
+                    ch.setDescription("Thông báo khi bạn bè thả cảm xúc hoặc gửi tin nhắn mới");
+                    ch.enableVibration(true);
+                    ch.setShowBadge(true);
+                    nm.createNotificationChannel(ch);
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "ensureNotificationChannel error: " + e.getMessage());
+            }
+        }
+    }
+
+    public void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, REQ_PERMISSIONS + 1);
+            }
+        }
+    }
+
     private void requestCameraAndAudioPermissionsIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
         List<String> needed = new ArrayList<>();
@@ -229,6 +261,10 @@ public class MainActivity extends Activity {
         }
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             needed.add(Manifest.permission.RECORD_AUDIO);
+        }
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+            needed.add("android.permission.POST_NOTIFICATIONS");
         }
         if (!needed.isEmpty()) {
             requestPermissions(needed.toArray(new String[0]), REQ_PERMISSIONS);
