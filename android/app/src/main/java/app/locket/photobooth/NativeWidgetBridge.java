@@ -77,10 +77,105 @@ public class NativeWidgetBridge {
         if (momentJson == null || momentJson.isEmpty()) return;
         try {
             SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-            prefs.edit().putString("moment_json", momentJson).apply();
+            SharedPreferences.Editor ed = prefs.edit().putString("moment_json", momentJson);
+            JSONObject obj = new JSONObject(momentJson);
+            if (obj.has("streakCount")) {
+                int sc = obj.optInt("streakCount", -1);
+                if (sc >= 0) ed.putInt("streak_count", sc);
+            }
+            ed.apply();
             LocketWidgetProvider.triggerUpdateAll(context, false);
         } catch (Exception e) {
             Log.w(TAG, "updateWidgetMoment error: " + e.getMessage());
+        }
+    }
+
+    @JavascriptInterface
+    public void updateWidgetConfig(String configJson) {
+        if (configJson == null || configJson.isEmpty()) return;
+        try {
+            JSONObject obj = new JSONObject(configJson);
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            SharedPreferences.Editor ed = prefs.edit();
+            if (obj.has("borderStyle")) {
+                ed.putString("widget_border_style", obj.optString("borderStyle", "gold"));
+            }
+            if (obj.has("showStreak")) {
+                ed.putBoolean("widget_show_streak", obj.optBoolean("showStreak", true));
+            }
+            if (obj.has("streakCount")) {
+                int sc = obj.optInt("streakCount", -1);
+                if (sc >= 0) ed.putInt("streak_count", sc);
+            }
+            ed.apply();
+            LocketWidgetProvider.triggerUpdateAll(context, false);
+        } catch (Exception e) {
+            Log.w(TAG, "updateWidgetConfig error: " + e.getMessage());
+        }
+    }
+
+    @JavascriptInterface
+    public String getAppIcon() {
+        try {
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            return prefs.getString("app_icon_id", "default");
+        } catch (Exception e) {
+            return "default";
+        }
+    }
+
+    @JavascriptInterface
+    public boolean setAppIcon(String iconId) {
+        String target = (iconId == null || iconId.isEmpty()) ? "default" : iconId;
+        String[][] aliases = new String[][]{
+                {"default", "app.locket.photobooth.IconDefault"},
+                {"gold", "app.locket.photobooth.IconGold"},
+                {"pink", "app.locket.photobooth.IconPink"},
+                {"sky", "app.locket.photobooth.IconSky"},
+                {"neon", "app.locket.photobooth.IconNeon"},
+                {"matcha", "app.locket.photobooth.IconMatcha"},
+        };
+        boolean matched = false;
+        for (String[] pair : aliases) {
+            if (pair[0].equals(target)) {
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) target = "default";
+
+        try {
+            PackageManager pm = context.getPackageManager();
+            // Enable the chosen alias first so launcher always has an active entry
+            for (String[] pair : aliases) {
+                if (pair[0].equals(target)) {
+                    pm.setComponentEnabledSetting(
+                            new ComponentName(context, pair[1]),
+                            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                            PackageManager.DONT_KILL_APP
+                    );
+                }
+            }
+            for (String[] pair : aliases) {
+                if (!pair[0].equals(target)) {
+                    pm.setComponentEnabledSetting(
+                            new ComponentName(context, pair[1]),
+                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                            PackageManager.DONT_KILL_APP
+                    );
+                }
+            }
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            prefs.edit().putString("app_icon_id", target).apply();
+            mainHandler.post(() -> Toast.makeText(
+                    context,
+                    "Đã đổi biểu tượng ứng dụng! Màn hình chính sẽ cập nhật sau vài giây.",
+                    Toast.LENGTH_LONG
+            ).show());
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "setAppIcon error: " + e.getMessage());
+            return false;
         }
     }
 

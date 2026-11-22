@@ -11,6 +11,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Shader;
@@ -96,6 +97,9 @@ public class LocketWidgetProvider extends AppWidgetProvider {
 
         SharedPreferences prefs = context.getSharedPreferences(NativeWidgetBridge.PREFS_NAME, Context.MODE_PRIVATE);
         String momentJsonStr = prefs.getString("moment_json", null);
+        String borderStyle = prefs.getString("widget_border_style", "gold");
+        boolean showStreak = prefs.getBoolean("widget_show_streak", true);
+        int streakCount = prefs.getInt("streak_count", 0);
 
         Bitmap photoBitmap = null;
         Bitmap avatarBitmap = null;
@@ -109,11 +113,14 @@ public class LocketWidgetProvider extends AppWidgetProvider {
                 String avatarUrl = moment.optString("authorAvatar", "");
                 authorName = moment.optString("authorName", "Your Friends");
                 caption = moment.optString("caption", "");
+                if (moment.has("streakCount") && moment.optInt("streakCount", 0) > 0) {
+                    streakCount = moment.optInt("streakCount", streakCount);
+                }
 
                 if (!imageUrl.isEmpty()) {
                     Bitmap rawPhoto = loadOrDownloadBitmap(context, imageUrl, "widget_latest_photo.jpg", 640);
                     if (rawPhoto != null) {
-                        photoBitmap = makeRoundedSquareBitmap(rawPhoto, 512, 72f);
+                        photoBitmap = makeRoundedSquareBitmap(rawPhoto, 512, 74f, borderStyle);
                     }
                 }
                 if (!avatarUrl.isEmpty()) {
@@ -166,10 +173,18 @@ public class LocketWidgetProvider extends AppWidgetProvider {
                 } else {
                     views.setViewVisibility(R.id.widget_caption, View.GONE);
                 }
+
+                if (showStreak && streakCount > 0) {
+                    views.setViewVisibility(R.id.widget_streak_badge, View.VISIBLE);
+                    views.setTextViewText(R.id.widget_streak_badge, "\uD83D\uDD25 " + streakCount);
+                } else {
+                    views.setViewVisibility(R.id.widget_streak_badge, View.GONE);
+                }
             } else {
                 views.setViewVisibility(R.id.widget_photo, View.GONE);
                 views.setViewVisibility(R.id.widget_author_pill, View.GONE);
                 views.setViewVisibility(R.id.widget_caption, View.GONE);
+                views.setViewVisibility(R.id.widget_streak_badge, View.GONE);
                 views.setViewVisibility(R.id.widget_empty_box, View.VISIBLE);
                 views.setTextViewText(R.id.widget_empty_title, "Your Friends");
             }
@@ -280,10 +295,64 @@ public class LocketWidgetProvider extends AppWidgetProvider {
             momentPayload.put("authorAvatar", authorAvatar);
             momentPayload.put("updatedAt", System.currentTimeMillis());
 
+            int liveStreak = fetchLocketStreakCount(idToken);
+            if (liveStreak > 0) {
+                momentPayload.put("streakCount", liveStreak);
+                prefs.edit().putInt("streak_count", liveStreak).apply();
+            } else {
+                int savedStreak = prefs.getInt("streak_count", 0);
+                if (savedStreak > 0) momentPayload.put("streakCount", savedStreak);
+            }
+
             prefs.edit().putString("moment_json", momentPayload.toString()).apply();
         } catch (Exception e) {
             Log.w(TAG, "fetchLatestFeedMomentIfPossible error: " + e.getMessage());
         }
+    }
+
+    private static int fetchLocketStreakCount(String idToken) {
+        if (idToken == null || idToken.isEmpty()) return 0;
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL("https://api.locketcamera.com/getLatestMomentV2");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(12000);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Authorization", "Bearer " + idToken);
+            conn.setRequestProperty("X-Client-Version", "iOS/FirebaseSDK/10.23.1/FirebaseCore-iOS");
+            conn.setRequestProperty("X-Firebase-GMPID", "1:641029076083:ios:cc8eb46290d69b234fa606");
+            conn.setRequestProperty("X-Ios-Bundle-Identifier", "com.locket.Locket");
+            conn.setRequestProperty("X-Firebase-Client", "H4sIAAAAAAAAAKtWykhNLCpJSk0sKVayio7VUSpLLSrOzM9TslIyUqoFAFyivEQfAAAA");
+            conn.setDoOutput(true);
+            JSONObject req = new JSONObject().put("data", new JSONObject().put("fetch_streak", true));
+            byte[] body = req.toString().getBytes(StandardCharsets.UTF_8);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body);
+                os.flush();
+            }
+            if (conn.getResponseCode() >= 200 && conn.getResponseCode() < 300) {
+                try (InputStream in = conn.getInputStream()) {
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    byte[] buf = new byte[4096];
+                    int n;
+                    while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
+                    JSONObject parsed = new JSONObject(bos.toString("UTF-8"));
+                    JSONObject result = parsed.optJSONObject("result");
+                    JSONObject streak = result != null ? result.optJSONObject("streak") : null;
+                    if (streak != null) {
+                        return streak.optInt("count", 0);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "fetchLocketStreakCount failed: " + e.getMessage());
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+        return 0;
     }
 
     private static JSONObject fetchLocketUserProfile(String uid, String idToken) {
@@ -425,7 +494,7 @@ public class LocketWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    private static Bitmap makeRoundedSquareBitmap(Bitmap src, int targetSize, float cornerRadiusPx) {
+    private static Bitmap makeRoundedSquareBitmap(Bitmap src, int targetSize, float cornerRadiusPx, String borderStyle) {
         int minSide = Math.min(src.getWidth(), src.getHeight());
         int x = (src.getWidth() - minSide) / 2;
         int y = (src.getHeight() - minSide) / 2;
@@ -440,12 +509,34 @@ public class LocketWidgetProvider extends AppWidgetProvider {
         RectF rect = new RectF(0f, 0f, targetSize, targetSize);
         canvas.drawRoundRect(rect, cornerRadiusPx, cornerRadiusPx, paint);
 
-        Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        borderPaint.setStyle(Paint.Style.STROKE);
-        borderPaint.setStrokeWidth(4f);
-        borderPaint.setColor(0x38FFFFFF);
-        RectF borderRect = new RectF(2f, 2f, targetSize - 2f, targetSize - 2f);
-        canvas.drawRoundRect(borderRect, cornerRadiusPx, cornerRadiusPx, borderPaint);
+        if (borderStyle == null) borderStyle = "gold";
+        if (!"none".equals(borderStyle)) {
+            float strokeW = 14f;
+            float half = strokeW / 2f;
+            Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            borderPaint.setStyle(Paint.Style.STROKE);
+            borderPaint.setStrokeWidth(strokeW);
+
+            int[] colors;
+            if ("rainbow".equals(borderStyle)) {
+                colors = new int[]{0xFFFF5F9E, 0xFFFFD666, 0xFF4DF6FF, 0xFFA855F7};
+            } else if ("pink".equals(borderStyle)) {
+                colors = new int[]{0xFFFFD6EC, 0xFFFF72B6, 0xFFFF4D94};
+            } else if ("neon".equals(borderStyle)) {
+                colors = new int[]{0xFF00F5FF, 0xFF7C3AED, 0xFFFF2BD6};
+            } else if ("white".equals(borderStyle)) {
+                colors = new int[]{0xFFFFFFFF, 0xFFE5E7EB, 0xFFFFFFFF};
+            } else {
+                // Classic Locket Gold gradient ring
+                colors = new int[]{0xFFFFE98A, 0xFFF6C453, 0xFFFF9500, 0xFFFFDF73};
+            }
+            borderPaint.setShader(new LinearGradient(
+                    0f, 0f, targetSize, targetSize,
+                    colors, null, Shader.TileMode.CLAMP
+            ));
+            RectF borderRect = new RectF(half, half, targetSize - half, targetSize - half);
+            canvas.drawRoundRect(borderRect, Math.max(8f, cornerRadiusPx - half * 0.7f), Math.max(8f, cornerRadiusPx - half * 0.7f), borderPaint);
+        }
 
         return output;
     }

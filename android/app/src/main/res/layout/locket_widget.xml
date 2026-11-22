@@ -6,7 +6,7 @@
     android:background="@drawable/widget_card_bg"
     android:padding="0dp">
 
-    <!-- Live Moment Photo Layer (Hidden when empty, shown when a friend photo arrives) -->
+    <!-- Live Moment Photo Layer (Rendered with custom Gold/Gradient Border Frame) -->
     <ImageView
         android:id="@+id/widget_photo"
         android:layout_width="match_parent"
@@ -15,7 +15,7 @@
         android:visibility="gone"
         android:contentDescription="@string/widget_name" />
 
-    <!-- Default "Your Friends" Card (Matches Locket Widget Sheet screenshot) -->
+    <!-- Default "Your Friends" Card -->
     <LinearLayout
         android:id="@+id/widget_empty_box"
         android:layout_width="match_parent"
@@ -50,13 +50,32 @@
             android:ellipsize="end" />
     </LinearLayout>
 
+    <!-- Top-Left Streak Badge (🔥 N) -->
+    <TextView
+        android:id="@+id/widget_streak_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_margin="10dp"
+        android:background="@drawable/widget_streak_bg"
+        android:paddingStart="9dp"
+        android:paddingEnd="9dp"
+        android:paddingTop="3.5dp"
+        android:paddingBottom="3.5dp"
+        android:text="🔥 0"
+        android:textColor="#FFFFE27A"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:singleLine="true"
+        android:visibility="gone" />
+
     <!-- Top-Right Refresh Button -->
     <ImageButton
         android:id="@+id/widget_refresh_btn"
         android:layout_width="28dp"
         android:layout_height="28dp"
         android:layout_gravity="top|end"
-        android:layout_margin="8dp"
+        android:layout_margin="10dp"
         android:background="@drawable/widget_badge_bg"
         android:padding="5dp"
         android:scaleType="centerInside"
@@ -69,9 +88,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="36dp"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="40dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
         android:background="@drawable/widget_badge_bg"
         android:paddingStart="10dp"
         android:paddingEnd="10dp"
@@ -90,7 +109,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
-        android:layout_margin="9dp"
+        android:layout_margin="10dp"
         android:background="@drawable/widget_badge_bg"
         android:gravity="center_vertical"
         android:orientation="horizontal"
@@ -113,7 +132,7 @@
             android:id="@+id/widget_author_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:maxWidth="110dp"
+            android:maxWidth="115dp"
             android:singleLine="true"
             android:ellipsize="end"
             android:textColor="#FFFFFFFF"
@@ -121,4 +140,3 @@
             android:textStyle="bold" />
     </LinearLayout>
 </FrameLayout>
-

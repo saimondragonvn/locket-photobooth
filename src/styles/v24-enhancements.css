@@ -76,29 +76,29 @@
   width: 20px;
 }
 
-/* --- Depth Text Editor Fullscreen Sheet --- */
+/* --- Depth Text Editor Fullscreen Sheet (Portaled to document.body above MobileTopBar) --- */
 .lk-depth-backdrop {
-  align-items: flex-end;
+  align-items: stretch;
   animation: lkFadeIn 0.16s ease-out;
-  background: rgba(0, 0, 0, 0.86);
+  background: rgba(0, 0, 0, 0.92);
   display: flex;
   inset: 0;
   justify-content: center;
   position: fixed;
-  z-index: 650;
+  z-index: 9999;
 }
 
 .lk-depth-sheet {
   animation: lkSlideUp 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   background: #141417;
-  border-radius: 26px 26px 0 0;
   color: #fff;
   display: flex;
   flex-direction: column;
-  height: min(96dvh, 860px);
+  height: var(--app-h, 100dvh);
   max-width: 520px;
   overflow: hidden;
-  padding-bottom: var(--safe-bottom, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-top: env(safe-area-inset-top, 0px);
   width: 100%;
 }
 
@@ -110,17 +110,56 @@
   .lk-depth-sheet {
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 26px;
-    height: min(90dvh, 820px);
+    height: min(92dvh, 840px);
   }
 }
 
 .lk-depth-head {
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #18181c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-shrink: 0;
   justify-content: space-between;
-  padding: 12px 14px;
+  padding: 10px 14px;
+}
+
+.lk-depth-foot {
+  background: #18181c;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-shrink: 0;
+  gap: 10px;
+  padding: 10px 14px 12px;
+}
+
+.lk-depth-foot-cancel {
+  background: rgba(255, 255, 255, 0.11);
+  border: none;
+  border-radius: 14px;
+  color: #fff;
+  cursor: pointer;
+  flex: 0.7;
+  font-size: 14.5px;
+  font-weight: 700;
+  height: 44px;
+}
+
+.lk-depth-foot-apply {
+  background: var(--accent-grad, linear-gradient(135deg, #ffe27a, #f6c453));
+  border: none;
+  border-radius: 14px;
+  color: #141417;
+  cursor: pointer;
+  flex: 1.5;
+  font-size: 14.5px;
+  font-weight: 800;
+  height: 44px;
+}
+
+.lk-depth-foot-apply:disabled,
+.lk-depth-foot-cancel:disabled {
+  opacity: 0.45;
 }
 
 .lk-depth-title {
@@ -587,3 +626,542 @@
     transform: rotate(360deg);
   }
 }
+
+/* ==========================================================================
+   Locket Photobooth v2.5.0 Additions
+   - Camera Rollcall Trigger, Quick Live Status Chips, Tap-to-Focus Ring
+   - Double-Tap Heart Burst Animation on Moments
+   - App Icon Picker Sheet & Daily Rollcall Sheet
+   ========================================================================== */
+
+.lk-rollcall-cam-btn {
+  align-items: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(20, 20, 24, 0.56);
+  border: 1px solid rgba(246, 196, 83, 0.52);
+  border-radius: 999px;
+  bottom: 18px;
+  color: #ffe27a;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 5px;
+  left: 18px;
+  padding: 7px 13px;
+  position: absolute;
+  transition: transform 0.14s ease, background 0.14s ease;
+  z-index: 3;
+}
+
+.lk-rollcall-cam-btn:active {
+  transform: scale(0.93);
+}
+
+.lk-quick-tags {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  left: 50%;
+  max-width: 92%;
+  overflow-x: auto;
+  position: absolute;
+  bottom: 72px;
+  scrollbar-width: none;
+  transform: translateX(-50%);
+  z-index: 3;
+}
+
+.lk-quick-tags::-webkit-scrollbar {
+  display: none;
+}
+
+.lk-qtag {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+.lk-qtag:active {
+  transform: scale(0.93);
+}
+
+.lk-focus-ring {
+  animation: lkFocusPop 0.65s ease-out forwards;
+  border: 2px solid #f6c453;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(246, 196, 83, 0.55);
+  height: 62px;
+  margin-left: -31px;
+  margin-top: -31px;
+  pointer-events: none;
+  position: absolute;
+  width: 62px;
+  z-index: 4;
+}
+
+@keyframes lkFocusPop {
+  0% {
+    opacity: 0.95;
+    transform: scale(1.35);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+}
+
+.lk-heart-burst {
+  animation: lkHeartPop 0.72s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  filter: drop-shadow(0 8px 22px rgba(255, 45, 85, 0.65));
+  font-size: 86px;
+  left: 50%;
+  line-height: 1;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+}
+
+@keyframes lkHeartPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+  28% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.18);
+  }
+  58% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.98);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -62%) scale(1.28);
+  }
+}
+
+/* --- Shared Modal Sheet (App Icon Picker & Rollcall) --- */
+.lk-sheet-backdrop {
+  align-items: flex-end;
+  animation: lkFadeIn 0.16s ease-out;
+  background: rgba(0, 0, 0, 0.74);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 9999;
+}
+
+.lk-sheet-panel {
+  animation: lkSlideUp 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  background: #1b1b1f;
+  border-radius: 28px 28px 0 0;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 90dvh;
+  max-width: 480px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 18px calc(22px + env(safe-area-inset-bottom, 0px));
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .lk-sheet-backdrop {
+    align-items: center;
+    padding: 20px;
+  }
+  .lk-sheet-panel {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 28px;
+  }
+}
+
+.lk-sheet-handle {
+  align-self: center;
+  background: rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  height: 4.5px;
+  width: 42px;
+}
+
+.lk-sheet-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.lk-sheet-head h3 {
+  font-size: 18.5px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.lk-sheet-close {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  font-size: 15px;
+  font-weight: 700;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.lk-sheet-sub {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13.5px;
+  line-height: 1.45;
+  margin: -4px 0 2px;
+}
+
+.lk-sheet-notice {
+  background: rgba(246, 196, 83, 0.15);
+  border: 1px solid rgba(246, 196, 83, 0.38);
+  border-radius: 14px;
+  color: #ffe27a;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.lk-sheet-primary {
+  background: var(--accent-grad, linear-gradient(135deg, #ffe27a, #f6c453));
+  border: none;
+  border-radius: 14px;
+  color: #161618;
+  cursor: pointer;
+  font-size: 15.5px;
+  font-weight: 800;
+  height: 46px;
+  width: 100%;
+}
+
+/* App Icon Picker Grid */
+.lk-icon-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.lk-icon-card {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 8px;
+  text-align: center;
+  transition: transform 0.14s, border-color 0.14s, background 0.14s;
+}
+
+.lk-icon-card:active {
+  transform: scale(0.96);
+}
+
+.lk-icon-card.on {
+  background: rgba(246, 196, 83, 0.12);
+  border-color: #f6c453;
+}
+
+.lk-icon-tile {
+  align-items: center;
+  border-radius: 18px;
+  display: flex;
+  height: 62px;
+  justify-content: center;
+  position: relative;
+  width: 62px;
+}
+
+.lk-icon-check {
+  align-items: center;
+  background: #22c55e;
+  border: 2px solid #1b1b1f;
+  border-radius: 50%;
+  bottom: -4px;
+  color: #fff;
+  display: flex;
+  font-size: 11px;
+  font-weight: 900;
+  height: 20px;
+  justify-content: center;
+  position: absolute;
+  right: -4px;
+  width: 20px;
+}
+
+.lk-icon-name {
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.lk-icon-desc {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 10.5px;
+  line-height: 1.25;
+}
+
+/* Rollcall Sheet */
+.lk-rc-prompt-card {
+  background: linear-gradient(145deg, rgba(246, 196, 83, 0.18), rgba(255, 132, 61, 0.1));
+  border: 1px solid rgba(246, 196, 83, 0.35);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.lk-rc-prompt-top {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.lk-rc-pill {
+  background: rgba(246, 196, 83, 0.24);
+  border-radius: 999px;
+  color: #ffe27a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+}
+
+.lk-rc-streak {
+  color: #ffe27a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.lk-rc-prompt-text {
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.lk-rc-prompt-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.lk-rc-dice {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  height: 40px;
+  padding: 0 12px;
+}
+
+.lk-rc-shoot {
+  background: var(--accent-grad, linear-gradient(135deg, #ffe27a, #f6c453));
+  border: none;
+  border-radius: 12px;
+  color: #161618;
+  cursor: pointer;
+  flex: 1;
+  font-size: 14px;
+  font-weight: 800;
+  height: 40px;
+  padding: 0 14px;
+}
+
+.lk-rc-done-note {
+  color: #86efac;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.lk-rc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lk-rc-sec-title {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.lk-rc-avatars {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 2px;
+  scrollbar-width: none;
+}
+
+.lk-rc-avatars::-webkit-scrollbar {
+  display: none;
+}
+
+.lk-rc-friend-pill {
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 5px;
+  padding: 0;
+  width: 60px;
+}
+
+.lk-rc-avatar-ring {
+  align-items: center;
+  background: #2c2c30;
+  border: 2.5px solid #22c55e;
+  border-radius: 50%;
+  display: flex;
+  font-size: 18px;
+  font-weight: 800;
+  height: 52px;
+  justify-content: center;
+  position: relative;
+  width: 52px;
+}
+
+.lk-rc-avatar-ring img {
+  border-radius: 50%;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.lk-rc-check-dot {
+  align-items: center;
+  background: #22c55e;
+  border: 2px solid #1b1b1f;
+  border-radius: 50%;
+  bottom: -2px;
+  color: #fff;
+  display: flex;
+  font-size: 10px;
+  font-weight: 900;
+  height: 18px;
+  justify-content: center;
+  position: absolute;
+  right: -2px;
+  width: 18px;
+}
+
+.lk-rc-friend-name {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 11.5px;
+  font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lk-rc-empty {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 13px;
+  padding: 6px 2px;
+}
+
+.lk-rc-missing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lk-rc-missing-row {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+}
+
+.lk-rc-missing-av {
+  align-items: center;
+  background: #323238;
+  border-radius: 50%;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 800;
+  height: 36px;
+  justify-content: center;
+  overflow: hidden;
+  width: 36px;
+}
+
+.lk-rc-missing-av img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.lk-rc-missing-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lk-rc-nudge-btn {
+  background: rgba(246, 196, 83, 0.18);
+  border: 1px solid rgba(246, 196, 83, 0.4);
+  border-radius: 999px;
+  color: #ffe27a;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 800;
+  padding: 6px 12px;
+}
+
+.lk-rc-nudge-btn.done {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.35);
+  color: #86efac;
+}
+

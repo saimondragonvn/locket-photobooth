@@ -19,6 +19,173 @@
  *  13. Vàng Hoàng Gia (`gold-luxe`)
  */
 
+export const EXTRA_BOOTH_LAYOUTS = [
+  // 1. Dải 4 dọc (Classic centered Life4Cut strip)
+  (() => {
+    const pad = 0.04;
+    const gap = 0.016;
+    const w = 0.54;
+    const x = (1 - w) / 2;
+    const foot = 0.075;
+    const h = (1 - pad - foot - gap * 3) / 4;
+    return {
+      id: 'strip4',
+      name: 'Dải 4 dọc',
+      cells: [0, 1, 2, 3].map((shot) => ({
+        shot,
+        x,
+        y: pad + shot * (h + gap),
+        w,
+        h,
+      })),
+      footers: [{ x: 0.5, y: 1 - foot / 2, w: 0.72 }],
+      pad,
+      foot,
+      font: 0.03,
+      radius: 0.012,
+    };
+  })(),
+
+  // 2. Lưới lệch (Staggered editorial 2x2 like Photobox / Blue Gingham)
+  (() => {
+    const pad = 0.04;
+    const gap = 0.024;
+    const foot = 0.075;
+    const w = (1 - pad * 2 - gap) / 2;
+    const shift = 0.045;
+    const h = (1 - pad - foot - shift - gap) / 2;
+    return {
+      id: 'stagger',
+      name: 'Lưới lệch',
+      cells: [
+        { shot: 0, x: pad, y: pad, w, h },
+        { shot: 1, x: pad + w + gap, y: pad + shift, w, h },
+        { shot: 2, x: pad, y: pad + h + gap, w, h },
+        { shot: 3, x: pad + w + gap, y: pad + shift + h + gap, w, h },
+      ],
+      footers: [{ x: 0.5, y: 1 - foot / 2, w: 0.9 }],
+      pad,
+      foot,
+      font: 0.031,
+      radius: 0.014,
+    };
+  })(),
+
+  // 3. Dọc & 3 ô (Tall portrait on left + 3 stacked squares on right)
+  (() => {
+    const pad = 0.04;
+    const gap = 0.02;
+    const foot = 0.075;
+    const usableH = 1 - pad - foot;
+    const rightW = (usableH - gap * 2) / 3;
+    const leftW = 1 - pad * 2 - gap - rightW;
+    return {
+      id: 'sidebar',
+      name: 'Dọc & 3 ô',
+      cells: [
+        { shot: 0, x: pad, y: pad, w: leftW, h: usableH },
+        ...[1, 2, 3].map((shot, idx) => ({
+          shot,
+          x: pad + leftW + gap,
+          y: pad + idx * (rightW + gap),
+          w: rightW,
+          h: rightW,
+        })),
+      ],
+      footers: [{ x: 0.5, y: 1 - foot / 2, w: 0.92 }],
+      pad,
+      foot,
+      font: 0.032,
+      radius: 0.014,
+    };
+  })(),
+
+  // 4. Bento chéo (Dynamic asymmetric wide + square mosaic)
+  (() => {
+    const pad = 0.04;
+    const gap = 0.02;
+    const foot = 0.075;
+    const usableW = 1 - pad * 2 - gap;
+    const usableH = 1 - pad - foot - gap;
+    const h = usableH / 2;
+    const wide = usableW * 0.6;
+    const slim = usableW * 0.4;
+    return {
+      id: 'mosaic',
+      name: 'Bento chéo',
+      cells: [
+        { shot: 0, x: pad, y: pad, w: wide, h },
+        { shot: 1, x: pad + wide + gap, y: pad, w: slim, h },
+        { shot: 2, x: pad, y: pad + h + gap, w: slim, h },
+        { shot: 3, x: pad + slim + gap, y: pad + h + gap, w: wide, h },
+      ],
+      footers: [{ x: 0.5, y: 1 - foot / 2, w: 0.92 }],
+      pad,
+      foot,
+      font: 0.032,
+      radius: 0.014,
+    };
+  })(),
+
+  // 5. Phim ngang (2 wide panoramic cinema shots + 2 split squares below)
+  (() => {
+    const pad = 0.04;
+    const gap = 0.018;
+    const foot = 0.075;
+    const usableW = 1 - pad * 2;
+    const usableH = 1 - pad - foot - gap * 2;
+    const topH = usableH * 0.32;
+    const midH = usableH * 0.32;
+    const botH = usableH - topH - midH;
+    const halfW = (usableW - gap) / 2;
+    return {
+      id: 'cinema',
+      name: 'Phim ngang',
+      cells: [
+        { shot: 0, x: pad, y: pad, w: usableW, h: topH },
+        { shot: 1, x: pad, y: pad + topH + gap, w: usableW, h: midH },
+        { shot: 2, x: pad, y: pad + topH + midH + gap * 2, w: halfW, h: botH },
+        { shot: 3, x: pad + halfW + gap, y: pad + topH + midH + gap * 2, w: halfW, h: botH },
+      ],
+      footers: [{ x: 0.5, y: 1 - foot / 2, w: 0.92 }],
+      pad,
+      foot,
+      font: 0.031,
+      radius: 0.012,
+    };
+  })(),
+
+  // 6. Polaroid (Big classic Polaroid shot 0 + 3 mini contact prints on bottom strip)
+  (() => {
+    const pad = 0.055;
+    const gap = 0.02;
+    const foot = 0.1;
+    const usableW = 1 - pad * 2;
+    const miniW = (usableW - gap * 2) / 3;
+    const miniH = miniW * 0.72;
+    const mainH = 1 - pad - foot - gap - miniH;
+    return {
+      id: 'polaroid',
+      name: 'Polaroid',
+      cells: [
+        { shot: 0, x: pad, y: pad, w: usableW, h: mainH },
+        ...[1, 2, 3].map((shot, idx) => ({
+          shot,
+          x: pad + idx * (miniW + gap),
+          y: pad + mainH + gap,
+          w: miniW,
+          h: miniH,
+        })),
+      ],
+      footers: [{ x: 0.5, y: 1 - foot / 2, w: usableW }],
+      pad,
+      foot,
+      font: 0.036,
+      radius: 0.01,
+    };
+  })(),
+];
+
 export const EXTRA_BOOTH_GROUPS = [
   { id: 'trendy', name: 'Hot Trend' },
   { id: 'custom', name: 'Sáng tạo' },

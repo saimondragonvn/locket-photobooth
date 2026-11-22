@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   DEFAULT_DEPTH_TEXT_CONFIG,
   DEPTH_TEXT_FONTS,
@@ -198,14 +199,30 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
     }
   };
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !baking) onClose?.();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, baking, onClose]);
+
   if (!open) return null;
 
-  return (
-    <div className="lk-depth-backdrop" role="dialog" aria-modal="true" aria-label="Chèn chữ sau chủ thể">
-      <div className="lk-depth-sheet">
+  return createPortal(
+    <div
+      className="lk-depth-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Chèn chữ sau chủ thể"
+      onClick={() => !baking && onClose?.()}
+    >
+      <div className="lk-depth-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="lk-depth-head">
           <button type="button" className="lk-depth-cancel" onClick={onClose} disabled={baking}>
-            Huỷ
+            ✕ Thoát
           </button>
           <div className="lk-depth-title">Chữ sau chủ thể</div>
           <button
@@ -214,7 +231,7 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
             onClick={handleApply}
             disabled={baking || !imageRef.current}
           >
-            {baking ? 'Đang lưu...' : 'Áp dụng'}
+            {baking ? 'Đang lưu...' : '✓ Xong'}
           </button>
         </div>
 
@@ -536,7 +553,22 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
             </>
           )}
         </div>
+
+        <div className="lk-depth-foot">
+          <button type="button" className="lk-depth-foot-cancel" onClick={onClose} disabled={baking}>
+            Huỷ
+          </button>
+          <button
+            type="button"
+            className="lk-depth-foot-apply"
+            onClick={handleApply}
+            disabled={baking || !imageRef.current}
+          >
+            {baking ? 'Đang ghép ảnh...' : 'Áp dụng & Tiếp tục đăng'}
+          </button>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
