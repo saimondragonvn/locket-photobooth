@@ -4,17 +4,26 @@ import {
   APP_ICON_OPTIONS,
   getActiveAppIcon,
   setNativeAppIcon,
-  isRunningInAndroidApk,
 } from '../../services/nativeWidgetBridge.js';
 
+const CloseIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <path d="M18 6 6 18M6 6l12 12" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
 /**
- * Native Android App Icon Switcher Sheet (Locket Gold feature)
- * Lets users switch the actual Android Home Screen Launcher icon across 6 styles.
+ * Lowkey Minimalist Dark App Icon Switcher Sheet
  */
 export function AppIconPickerSheet({ open, onClose }) {
   const [selected, setSelected] = useState(getActiveAppIcon);
   const [notice, setNotice] = useState('');
-  const inApk = isRunningInAndroidApk();
 
   useEffect(() => {
     if (open) {
@@ -29,29 +38,24 @@ export function AppIconPickerSheet({ open, onClose }) {
     setSelected(iconId);
     const res = setNativeAppIcon(iconId);
     if (res.native && res.ok) {
-      setNotice('✅ Đã đổi biểu tượng ứng dụng! Màn hình chính sẽ tự cập nhật sau vài giây.');
+      setNotice('Đã đổi biểu tượng ứng dụng.');
     } else if (!res.native) {
-      setNotice('💡 Đã lưu lựa chọn! Cài đặt bản Android APK để đổi biểu tượng thật ngoài Màn hình chính.');
+      setNotice('Đã lưu (hỗ trợ đổi icon thật trên APK Android).');
     } else {
-      setNotice('⚠️ Không đổi được biểu tượng trên dòng máy này.');
+      setNotice('Thiết bị không hỗ trợ đổi icon tự động.');
     }
   };
 
   return createPortal(
-    <div className="lk-sheet-backdrop" role="dialog" aria-modal="true" aria-label="Đổi biểu tượng ứng dụng" onClick={onClose}>
+    <div className="lk-sheet-backdrop" role="dialog" aria-modal="true" aria-label="Biểu tượng ứng dụng" onClick={onClose}>
       <div className="lk-sheet-panel" onClick={(e) => e.stopPropagation()}>
         <div className="lk-sheet-handle" />
         <div className="lk-sheet-head">
-          <h3>Đổi biểu tượng ứng dụng</h3>
+          <h3>Biểu tượng ứng dụng</h3>
           <button type="button" className="lk-sheet-close" onClick={onClose} aria-label="Đóng">
-            ✕
+            <CloseIcon />
           </button>
         </div>
-        <p className="lk-sheet-sub">
-          {inApk
-            ? 'Chọn biểu tượng Locket bạn thích để hiển thị ngoài Màn hình chính điện thoại.'
-            : 'Xem trước 6 biểu tượng Locket Gold (hỗ trợ đổi thật trên ứng dụng Android APK).'}
-        </p>
 
         <div className="lk-icon-grid">
           {APP_ICON_OPTIONS.map((ic) => {
@@ -67,26 +71,25 @@ export function AppIconPickerSheet({ open, onClose }) {
                   className="lk-icon-tile"
                   style={{
                     background: ic.bg,
-                    boxShadow: `inset 0 0 0 2.5px ${ic.ring}, 0 8px 18px rgba(0,0,0,0.4)`,
+                    boxShadow: `inset 0 0 0 2px ${ic.ring}`,
                   }}
                 >
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill={ic.heart} aria-hidden="true">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill={ic.heart} aria-hidden="true">
                     <path d="M12 20.4s-7.6-4.45-7.6-10.15A4.35 4.35 0 0 1 12 7.3a4.35 4.35 0 0 1 7.6 2.95c0 5.7-7.6 10.15-7.6 10.15z" />
                   </svg>
-                  {active && <span className="lk-icon-check">✓</span>}
+                  {active && (
+                    <span className="lk-icon-check">
+                      <CheckIcon />
+                    </span>
+                  )}
                 </div>
                 <span className="lk-icon-name">{ic.name}</span>
-                <span className="lk-icon-desc">{ic.desc}</span>
               </button>
             );
           })}
         </div>
 
         {notice && <div className="lk-sheet-notice">{notice}</div>}
-
-        <button type="button" className="lk-sheet-primary" onClick={onClose}>
-          Xong
-        </button>
       </div>
     </div>,
     document.body

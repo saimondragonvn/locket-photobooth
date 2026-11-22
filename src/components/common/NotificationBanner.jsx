@@ -1,9 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { IN_APP_NOTIFICATION_EVENT } from '../../services/notificationService.js';
 
+const CloseIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+    <path d="M18 6 6 18M6 6l12 12" />
+  </svg>
+);
+
+const MsgIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.3 9.3 0 0 1-3.9-.8L3 20.5l1.5-4.3A7.9 7.9 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" />
+  </svg>
+);
+
 /**
- * Sleek top-anchored floating notification banner for live Emote Reactions & Incoming Messages.
- * Supports tap-to-navigate (jump to chat thread or moment), swipe-up dismiss, and auto-dismiss.
+ * Lowkey Minimalist Floating Notification Pill (Emote Reactions & Incoming Messages)
  */
 export function NotificationBanner({ onOpenChat, onOpenMoment }) {
   const [queue, setQueue] = useState([]);
@@ -36,7 +47,7 @@ export function NotificationBanner({ onOpenChat, onOpenMoment }) {
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setActive(null);
-    }, 4600);
+    }, 4200);
     return () => clearTimeout(timerRef.current);
   }, [active]);
 
@@ -60,7 +71,7 @@ export function NotificationBanner({ onOpenChat, onOpenMoment }) {
   const handleTouchMove = (e) => {
     if (touchStartYRef.current === null) return;
     const dy = (e.touches?.[0]?.clientY ?? 0) - touchStartYRef.current;
-    if (dy < -24) {
+    if (dy < -22) {
       touchStartYRef.current = null;
       clearTimeout(timerRef.current);
       setActive(null);
@@ -81,12 +92,12 @@ export function NotificationBanner({ onOpenChat, onOpenMoment }) {
             <img src={active.avatar} alt="" className="lk-notif-avatar" />
           ) : (
             <span className="lk-notif-avatar lk-notif-fallback">
-              {active.type === 'reaction' ? active.emoji || '💛' : '💬'}
+              {active.type === 'reaction' ? active.emoji || '' : <MsgIcon />}
             </span>
           )}
-          <span className="lk-notif-badge">
-            {active.type === 'reaction' ? active.emoji || '✨' : '💬'}
-          </span>
+          {active.type === 'reaction' && active.emoji && (
+            <span className="lk-notif-badge">{active.emoji}</span>
+          )}
         </div>
 
         <div className="lk-notif-body">
@@ -97,14 +108,14 @@ export function NotificationBanner({ onOpenChat, onOpenMoment }) {
         <button
           type="button"
           className="lk-notif-close"
-          aria-label="Đóng thông báo"
+          aria-label="Đóng"
           onClick={(e) => {
             e.stopPropagation();
             clearTimeout(timerRef.current);
             setActive(null);
           }}
         >
-          ×
+          <CloseIcon />
         </button>
       </div>
     </div>

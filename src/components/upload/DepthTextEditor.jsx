@@ -14,18 +14,30 @@ import {
 
 const PREVIEW_CANVAS_SIZE = 720;
 
+const CloseIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <path d="M18 6 6 18M6 6l12 12" />
+  </svg>
+);
+
+const LayersIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+    <polyline points="2 12 12 17 22 12" />
+    <polyline points="2 17 12 22 22 17" />
+  </svg>
+);
+
 /**
- * Interactive "Chèn chữ sau chủ thể" (Text Behind Subject) Editor Modal
- * - Runs on-device AI segmentation via MediaPipe Selfie Segmenter
- * - Live 60fps 3-layer drag-and-drop canvas preview (Background -> Text -> Subject Cutout)
- * - Exports crisp 1280x1280 JPEG File ready to upload to Locket
+ * Basic Lowkey Minimalist Dark "Chữ nền" (Text Behind Subject) Editor
+ * - Portaled to document.body (z-index 9999) with full safe-area clearance
+ * - 100% unobstructed square photo canvas (zero noisy status/badge overlays once ready)
+ * - Single crisp top header (Close | Title + Layer toggle | Xong)
  */
 export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
   const [config, setConfig] = useState(DEFAULT_DEPTH_TEXT_CONFIG);
   const [tab, setTab] = useState('text'); // 'text' | 'style' | 'mask'
   const [aiStatus, setAiStatus] = useState('idle'); // 'idle' | 'loading' | 'ready' | 'error'
-  const [aiProgress, setAiProgress] = useState(0);
-  const [aiMessage, setAiMessage] = useState('');
   const [baking, setBaking] = useState(false);
 
   const canvasRef = useRef(null);
@@ -42,14 +54,11 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
     setConfig((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  // Load image & trigger automatic AI subject segmentation when opened
   useEffect(() => {
     if (!open || !imageUrl) return;
     let cancelled = false;
 
     setAiStatus('loading');
-    setAiProgress(10);
-    setAiMessage('Đang chuẩn bị ảnh...');
     maskRef.current = null;
     cutoutRef.current = null;
 
@@ -63,28 +72,17 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
       if (cancelled) return;
 
       try {
-        const mask = await segmentSubjectMask(img, (pct, msg) => {
-          if (cancelled) return;
-          setAiProgress(pct);
-          if (msg) setAiMessage(msg);
-        });
+        const mask = await segmentSubjectMask(img);
         if (cancelled) return;
         maskRef.current = mask;
         setAiStatus('ready');
-        setAiProgress(100);
-        setAiMessage('Đã tách chủ thể · Kéo chữ trực tiếp trên ảnh');
         setMaskReadySeq((s) => s + 1);
-      } catch (err) {
-        if (cancelled) return;
-        setAiStatus('error');
-        setAiMessage(err?.message || 'Không tách được chủ thể, vẫn có thể chèn chữ');
+      } catch {
+        if (!cancelled) setAiStatus('error');
       }
     };
     img.onerror = () => {
-      if (!cancelled) {
-        setAiStatus('error');
-        setAiMessage('Không tải được ảnh xem trước');
-      }
+      if (!cancelled) setAiStatus('error');
     };
     img.src = imageUrl;
 
@@ -93,7 +91,6 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
     };
   }, [open, imageUrl]);
 
-  // Rebuild cached foreground cutout ONLY when mask or edge matting params change
   useEffect(() => {
     if (!open || !imageRef.current || !maskRef.current) return;
     const prevCutout = cutoutRef.current;
@@ -116,7 +113,6 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, imageReadySeq, config.threshold, config.feather, config.edgeShift, config.invertMask, aiStatus]);
 
-  // Ultra-fast 60fps composite render whenever text/style/cutout updates
   useEffect(() => {
     if (!open || !canvasRef.current || !imageRef.current) return;
     cancelAnimationFrame(rafRef.current);
@@ -128,7 +124,6 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
     return () => cancelAnimationFrame(rafRef.current);
   }, [open, config, imageReadySeq, maskReadySeq]);
 
-  // Cleanup offscreen cutout on close
   useEffect(() => {
     if (open) return;
     if (cutoutRef.current) {
@@ -138,27 +133,28 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !baking) onClose?.();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, baking, onClose]);
+
   const handleRetrySegment = useCallback(async () => {
     if (!imageRef.current) return;
     setAiStatus('loading');
-    setAiProgress(15);
-    setAiMessage('Đang tách lại chủ thể...');
     try {
-      const mask = await segmentSubjectMask(imageRef.current, (pct, msg) => {
-        setAiProgress(pct);
-        if (msg) setAiMessage(msg);
-      });
+      const mask = await segmentSubjectMask(imageRef.current);
       maskRef.current = mask;
       setAiStatus('ready');
-      setAiMessage('Đã tách chủ thể · Kéo chữ trực tiếp trên ảnh');
       setMaskReadySeq((s) => s + 1);
-    } catch (err) {
+    } catch {
       setAiStatus('error');
-      setAiMessage(err?.message || 'Lỗi tách chủ thể');
     }
   }, []);
 
-  // Pointer drag directly on preview canvas to position text behind subject smoothly
   const onPointerDown = (e) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -191,23 +187,12 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
     try {
       const file = await bakeDepthTextFile(imageRef.current, maskRef.current, config, 1280);
       onApply?.(file);
-    } catch (err) {
+    } catch {
       setAiStatus('error');
-      setAiMessage(err?.message || 'Không thể lưu ảnh');
     } finally {
       setBaking(false);
     }
   };
-
-  // Close on Escape key
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e) => {
-      if (e.key === 'Escape' && !baking) onClose?.();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, baking, onClose]);
 
   if (!open) return null;
 
@@ -216,25 +201,43 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
       className="lk-depth-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label="Chèn chữ sau chủ thể"
+      aria-label="Chữ sau chủ thể"
       onClick={() => !baking && onClose?.()}
     >
       <div className="lk-depth-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="lk-depth-head">
-          <button type="button" className="lk-depth-cancel" onClick={onClose} disabled={baking}>
-            ✕ Thoát
+        {/* Single Minimal Top Bar */}
+        <header className="lk-depth-head">
+          <button
+            type="button"
+            className="lk-depth-icon-action"
+            onClick={onClose}
+            disabled={baking}
+            aria-label="Đóng"
+          >
+            <CloseIcon />
           </button>
-          <div className="lk-depth-title">Chữ sau chủ thể</div>
+
+          <button
+            type="button"
+            className={`lk-depth-depth-btn ${config.behindSubject ? 'on' : ''}`}
+            onClick={() => updateConfig({ behindSubject: !config.behindSubject })}
+            aria-pressed={config.behindSubject}
+          >
+            <LayersIcon />
+            <span>{config.behindSubject ? 'Sau chủ thể' : 'Phía trước'}</span>
+          </button>
+
           <button
             type="button"
             className="lk-depth-apply"
             onClick={handleApply}
             disabled={baking || !imageRef.current}
           >
-            {baking ? 'Đang lưu...' : '✓ Xong'}
+            {baking ? '...' : 'Xong'}
           </button>
-        </div>
+        </header>
 
+        {/* 100% Unobstructed Square Photo Canvas */}
         <div className="lk-depth-stage">
           <canvas
             ref={canvasRef}
@@ -246,33 +249,20 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           />
-
-          <div className={`lk-depth-status ${aiStatus}`}>
-            {aiStatus === 'loading' && <span className="lk-depth-spin" />}
-            <span>
-              {aiStatus === 'loading'
-                ? `${aiMessage} (${aiProgress}%)`
-                : aiStatus === 'ready'
-                  ? '✓ Đã tách chủ thể · Kéo chữ trên ảnh'
-                  : aiMessage}
-            </span>
-            {aiStatus === 'error' && (
-              <button type="button" onClick={handleRetrySegment}>
-                Thử lại
-              </button>
-            )}
-          </div>
-
-          <button
-            type="button"
-            className={`lk-depth-layer-pill ${config.behindSubject ? 'on' : ''}`}
-            onClick={() => updateConfig({ behindSubject: !config.behindSubject })}
-            title="Bật/tắt tách chủ thể phía trước chữ"
-          >
-            {config.behindSubject ? '✨ Chữ sau chủ thể' : 'T Chữ phía trước'}
-          </button>
+          {aiStatus === 'loading' && (
+            <div className="lk-depth-loading" aria-live="polite">
+              <span className="lk-depth-spin" />
+              <span>Đang tách nền</span>
+            </div>
+          )}
+          {aiStatus === 'error' && (
+            <button type="button" className="lk-depth-loading error" onClick={handleRetrySegment}>
+              Thử tách lại
+            </button>
+          )}
         </div>
 
+        {/* Minimal Segmented Tabs */}
         <div className="lk-depth-tabs" role="tablist">
           <button
             type="button"
@@ -281,7 +271,7 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
             className={`lk-depth-tab ${tab === 'text' ? 'on' : ''}`}
             onClick={() => setTab('text')}
           >
-            Chữ & Mẫu
+            Chữ
           </button>
           <button
             type="button"
@@ -290,7 +280,7 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
             className={`lk-depth-tab ${tab === 'style' ? 'on' : ''}`}
             onClick={() => setTab('style')}
           >
-            Màu & Cỡ
+            Kiểu
           </button>
           <button
             type="button"
@@ -299,33 +289,34 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
             className={`lk-depth-tab ${tab === 'mask' ? 'on' : ''}`}
             onClick={() => setTab('mask')}
           >
-            Tách nền AI
+            Tách nền
           </button>
         </div>
 
+        {/* Clean Controls Area */}
         <div className="lk-depth-controls">
           {tab === 'text' && (
             <>
               <div className="lk-depth-input-row">
-                <textarea
-                  rows={2}
-                  className="lk-depth-textarea"
+                <input
+                  type="text"
+                  className="lk-depth-input"
                   value={config.text}
                   onChange={(e) => updateConfig({ text: e.target.value })}
-                  placeholder="Nhập chữ (ví dụ: TOGETHER)..."
-                  maxLength={60}
+                  placeholder="Nhập chữ..."
+                  maxLength={48}
                 />
                 <button
                   type="button"
                   className={`lk-depth-mini-btn ${config.uppercase ? 'on' : ''}`}
                   onClick={() => updateConfig({ uppercase: !config.uppercase })}
-                  title="Chữ in hoa"
+                  aria-label="In hoa"
+                  aria-pressed={config.uppercase}
                 >
                   AA
                 </button>
               </div>
 
-              <div className="lk-depth-label">Mẫu nhanh</div>
               <div className="lk-depth-scroll-row">
                 {DEPTH_TEXT_PRESETS.map((p) => (
                   <button
@@ -346,7 +337,6 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
                 ))}
               </div>
 
-              <div className="lk-depth-label">Phông chữ</div>
               <div className="lk-depth-scroll-row">
                 {DEPTH_TEXT_FONTS.map((f) => (
                   <button
@@ -365,7 +355,6 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
 
           {tab === 'style' && (
             <>
-              <div className="lk-depth-label">Màu sắc & Gradient</div>
               <div className="lk-depth-swatches">
                 {DEPTH_TEXT_SWATCHES.map((sw) => {
                   const bg =
@@ -377,14 +366,14 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
                     <button
                       key={sw.id}
                       type="button"
-                      title={sw.label}
+                      aria-label={sw.label}
                       className={`lk-depth-swatch ${active ? 'on' : ''}`}
                       style={{ background: bg }}
                       onClick={() => updateConfig({ swatchId: sw.id, customColor: '', hollow: false })}
                     />
                   );
                 })}
-                <label className="lk-depth-swatch lk-depth-color-pick" title="Tự chọn màu">
+                <label className="lk-depth-swatch lk-depth-color-pick" aria-label="Màu tuỳ chọn">
                   <input
                     type="color"
                     value={config.customColor || '#ffffff'}
@@ -421,19 +410,6 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
               </div>
 
               <div className="lk-depth-slider">
-                <span>Giãn chữ</span>
-                <input
-                  type="range"
-                  min={-0.04}
-                  max={0.22}
-                  step={0.01}
-                  value={config.letterSpacing}
-                  onChange={(e) => updateConfig({ letterSpacing: parseFloat(e.target.value) })}
-                />
-                <b>{Math.round(config.letterSpacing * 100)}</b>
-              </div>
-
-              <div className="lk-depth-slider">
                 <span>Độ mờ</span>
                 <input
                   type="range"
@@ -447,7 +423,7 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
               </div>
 
               <div className="lk-depth-slider">
-                <span>Viền chữ</span>
+                <span>Viền</span>
                 <input
                   type="range"
                   min={0}
@@ -471,14 +447,14 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
                     })
                   }
                 >
-                  Chữ rỗng viền
+                  Viền rỗng
                 </button>
                 <button
                   type="button"
                   className="lk-depth-chip"
                   onClick={() => updateConfig({ x: 0.5, y: 0.36, rotation: 0 })}
                 >
-                  Căn giữa lại
+                  Căn giữa
                 </button>
               </div>
             </>
@@ -487,7 +463,7 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
           {tab === 'mask' && (
             <>
               <div className="lk-depth-slider">
-                <span>Ngưỡng tách</span>
+                <span>Ngưỡng</span>
                 <input
                   type="range"
                   min={0.18}
@@ -513,7 +489,7 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
               </div>
 
               <div className="lk-depth-slider">
-                <span>Tối nền sau</span>
+                <span>Tối nền</span>
                 <input
                   type="range"
                   min={0}
@@ -526,7 +502,7 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
               </div>
 
               <div className="lk-depth-slider">
-                <span>Làm mờ nền</span>
+                <span>Mờ nền</span>
                 <input
                   type="range"
                   min={0}
@@ -544,28 +520,14 @@ export function DepthTextEditor({ open, imageUrl, onClose, onApply }) {
                   className={`lk-depth-chip ${config.invertMask ? 'on' : ''}`}
                   onClick={() => updateConfig({ invertMask: !config.invertMask })}
                 >
-                  Đảo vùng tách
+                  Đảo vùng
                 </button>
                 <button type="button" className="lk-depth-chip" onClick={handleRetrySegment}>
-                  Tách lại AI
+                  Tách lại
                 </button>
               </div>
             </>
           )}
-        </div>
-
-        <div className="lk-depth-foot">
-          <button type="button" className="lk-depth-foot-cancel" onClick={onClose} disabled={baking}>
-            Huỷ
-          </button>
-          <button
-            type="button"
-            className="lk-depth-foot-apply"
-            onClick={handleApply}
-            disabled={baking || !imageRef.current}
-          >
-            {baking ? 'Đang ghép ảnh...' : 'Áp dụng & Tiếp tục đăng'}
-          </button>
         </div>
       </div>
     </div>,
