@@ -190,11 +190,15 @@ public class LocketWidgetProvider extends AppWidgetProvider {
         }
 
         try {
-            JSONObject feedResp = postJson(UPSTREAM_API + "/locket/feed", new JSONObject().put("limit", 20), idToken);
+            JSONObject feedReq = new JSONObject().put("limit", 20).put("idToken", idToken);
+            JSONObject feedResp = postJson(UPSTREAM_API + "/locket/feed", feedReq, idToken);
             if (feedResp == null && refreshToken != null && !refreshToken.isEmpty()) {
+                JSONObject refreshPayload = new JSONObject()
+                        .put("refreshToken", refreshToken)
+                        .put("idToken", idToken);
                 JSONObject refreshed = postJson(
                         UPSTREAM_API + "/locket/refresh",
-                        new JSONObject().put("refreshToken", refreshToken),
+                        refreshPayload,
                         null
                 );
                 if (refreshed != null) {
@@ -206,13 +210,20 @@ public class LocketWidgetProvider extends AppWidgetProvider {
                                 .putString("id_token", newToken)
                                 .putString("refresh_token", newRefresh)
                                 .apply();
-                        feedResp = postJson(UPSTREAM_API + "/locket/feed", new JSONObject().put("limit", 20), idToken);
+                        feedResp = postJson(
+                                UPSTREAM_API + "/locket/feed",
+                                new JSONObject().put("limit", 20).put("idToken", idToken),
+                                idToken
+                        );
                     }
                 }
             }
 
             if (feedResp == null) return;
-            JSONArray items = feedResp.optJSONArray("items");
+            JSONArray items = feedResp.optJSONArray("moments");
+            if (items == null) {
+                items = feedResp.optJSONArray("items");
+            }
             JSONObject users = feedResp.optJSONObject("users");
             if (items == null || items.length() == 0) return;
 
@@ -243,15 +254,16 @@ public class LocketWidgetProvider extends AppWidgetProvider {
             String uid = chosen.optString("user", "");
             String authorName = "Your Friends";
             String authorAvatar = "";
-            if (users != null && !uid.isEmpty()) {
-                JSONObject uObj = users.optJSONObject(uid);
-                if (uObj != null) {
-                    String first = uObj.optString("first_name", "").trim();
-                    String last = uObj.optString("last_name", "").trim();
-                    String combined = (first + " " + last).trim();
-                    authorName = !combined.isEmpty() ? combined : uObj.optString("username", "Your Friends");
-                    authorAvatar = uObj.optString("profile_picture_url", "");
-                }
+            JSONObject uObj = (users != null && !uid.isEmpty()) ? users.optJSONObject(uid) : null;
+            if (uObj == null && !uid.isEmpty() && idToken != null && !idToken.isEmpty()) {
+                uObj = fetchLocketUserProfile(uid, idToken);
+            }
+            if (uObj != null) {
+                String first = uObj.optString("first_name", "").trim();
+                String last = uObj.optString("last_name", "").trim();
+                String combined = (first + " " + last).trim();
+                authorName = !combined.isEmpty() ? combined : uObj.optString("username", "Your Friends");
+                authorAvatar = uObj.optString("profile_picture_url", "");
             }
             if (uid.equals(meUid) && "Your Friends".equals(authorName)) {
                 authorName = "Bạn";
@@ -263,7 +275,7 @@ public class LocketWidgetProvider extends AppWidgetProvider {
             momentPayload.put("imageUrl", chosen.optString("thumbnail_url", ""));
             momentPayload.put("videoUrl", chosen.optString("video_url", ""));
             momentPayload.put("caption", chosen.optString("caption", ""));
-            momentPayload.put("date", chosen.optLong("date", 0L));
+            momentPayload.put("date", chosen.optString("date", ""));
             momentPayload.put("authorName", authorName);
             momentPayload.put("authorAvatar", authorAvatar);
             momentPayload.put("updatedAt", System.currentTimeMillis());
@@ -272,6 +284,51 @@ public class LocketWidgetProvider extends AppWidgetProvider {
         } catch (Exception e) {
             Log.w(TAG, "fetchLatestFeedMomentIfPossible error: " + e.getMessage());
         }
+    }
+
+    private static JSONObject fetchLocketUserProfile(String uid, String idToken) {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL("https://api.locketcamera.com/fetchUsers");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(12000);
+            conn.setReadTimeout(15000);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setRequestProperty("Accept-Language", "en-US");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Authorization", "Bearer " + idToken);
+            conn.setRequestProperty("X-Client-Version", "iOS/FirebaseSDK/10.23.1/FirebaseCore-iOS");
+            conn.setRequestProperty("X-Firebase-GMPID", "1:641029076083:ios:cc8eb46290d69b234fa606");
+            conn.setRequestProperty("X-Ios-Bundle-Identifier", "com.locket.Locket");
+            conn.setRequestProperty("X-Firebase-Client", "H4sIAAAAAAAAAKtWykhNLCpJSk0sKVayio7VUSpLLSrOzM9TslIyUqoFAFyivEQfAAAA");
+            conn.setDoOutput(true);
+            JSONObject req = new JSONObject().put("data", new JSONObject().put("user_uids", new JSONArray().put(uid)));
+            byte[] body = req.toString().getBytes(StandardCharsets.UTF_8);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body);
+                os.flush();
+            }
+            if (conn.getResponseCode() >= 200 && conn.getResponseCode() < 300) {
+                try (InputStream in = conn.getInputStream()) {
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    byte[] buf = new byte[4096];
+                    int n;
+                    while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
+                    JSONObject parsed = new JSONObject(bos.toString("UTF-8"));
+                    JSONObject result = parsed.optJSONObject("result");
+                    JSONArray data = result != null ? result.optJSONArray("data") : null;
+                    if (data != null && data.length() > 0) {
+                        return data.optJSONObject(0);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "fetchLocketUserProfile failed: " + e.getMessage());
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+        return null;
     }
 
     private static JSONObject postJson(String urlStr, JSONObject payload, String bearerToken) {

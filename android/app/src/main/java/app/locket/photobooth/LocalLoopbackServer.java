@@ -96,7 +96,7 @@ public class LocalLoopbackServer {
 
     private void handleClient(Socket socket) {
         try {
-            socket.setSoTimeout(60000);
+            socket.setSoTimeout(120000);
             socket.setTcpNoDelay(true);
             InputStream rawIn = new BufferedInputStream(socket.getInputStream());
             OutputStream out = socket.getOutputStream();
@@ -128,17 +128,28 @@ public class LocalLoopbackServer {
                 }
             }
 
-            int contentLength = 0;
-            if (headers.containsKey("content-length")) {
-                try {
-                    contentLength = Integer.parseInt(headers.get("content-length"));
-                } catch (NumberFormatException ignored) {
-                }
+            // Support Expect: 100-continue so Chromium WebView never stalls on large multipart uploads
+            String expectHeader = headers.get("expect");
+            if (expectHeader != null && expectHeader.toLowerCase(Locale.US).contains("100-continue")) {
+                out.write("HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+                out.flush();
             }
 
             byte[] body = null;
-            if (contentLength > 0) {
-                body = readExactBytes(rawIn, contentLength);
+            String te = headers.get("transfer-encoding");
+            if (te != null && te.toLowerCase(Locale.US).contains("chunked")) {
+                body = readChunkedBody(rawIn);
+            } else {
+                int contentLength = 0;
+                if (headers.containsKey("content-length")) {
+                    try {
+                        contentLength = Integer.parseInt(headers.get("content-length"));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+                if (contentLength > 0) {
+                    body = readExactBytes(rawIn, contentLength);
+                }
             }
 
             if ("OPTIONS".equals(method)) {
@@ -171,7 +182,7 @@ public class LocalLoopbackServer {
         String resp = "HTTP/1.1 204 No Content\r\n" +
                 "Access-Control-Allow-Origin: *\r\n" +
                 "Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS\r\n" +
-                "Access-Control-Allow-Headers: Content-Type, Authorization, X-Client-Version\r\n" +
+                "Access-Control-Allow-Headers: Content-Type, Authorization, Accept-Language, X-Client-Version\r\n" +
                 "Content-Length: 0\r\n" +
                 "Connection: close\r\n\r\n";
         out.write(resp.getBytes(StandardCharsets.UTF_8));
@@ -185,17 +196,23 @@ public class LocalLoopbackServer {
             conn = (HttpURLConnection) url.openConnection();
             conn.setInstanceFollowRedirects(true);
             conn.setConnectTimeout(25000);
-            conn.setReadTimeout(60000);
+            conn.setReadTimeout(120000);
             conn.setRequestMethod(method);
 
             conn.setRequestProperty("Origin", VERCEL_ORIGIN);
             conn.setRequestProperty("Referer", VERCEL_ORIGIN + "/");
             conn.setRequestProperty("User-Agent", reqHeaders.getOrDefault("user-agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0.0.0 Mobile Safari/537.36"));
 
-            String[] forwardHeaders = new String[]{"content-type", "authorization", "accept", "x-client-version"};
-            for (String h : forwardHeaders) {
-                if (reqHeaders.containsKey(h)) {
-                    conn.setRequestProperty(h, reqHeaders.get(h));
+            String[][] forwardHeaders = new String[][]{
+                    {"content-type", "Content-Type"},
+                    {"authorization", "Authorization"},
+                    {"accept", "Accept"},
+                    {"accept-language", "Accept-Language"},
+                    {"x-client-version", "X-Client-Version"}
+            };
+            for (String[] pair : forwardHeaders) {
+                if (reqHeaders.containsKey(pair[0])) {
+                    conn.setRequestProperty(pair[1], reqHeaders.get(pair[0]));
                 }
             }
 
@@ -222,7 +239,7 @@ public class LocalLoopbackServer {
             }
             byte[] respBytes = (respIn != null) ? readAllBytes(respIn) : new byte[0];
 
-            String headerBlock = "HTTP/1.1 " + status + " OK\r\n" +
+            String headerBlock = "HTTP/1.1 " + status + " " + httpStatusText(status) + "\r\n" +
                     "Content-Type: " + contentType + "\r\n" +
                     "Content-Length: " + respBytes.length + "\r\n" +
                     "Access-Control-Allow-Origin: *\r\n" +
@@ -232,11 +249,14 @@ public class LocalLoopbackServer {
             out.write(respBytes);
             out.flush();
         } catch (Exception e) {
-            String errJson = "{\"error\":{\"message\":\"" + e.getMessage().replace("\"", "'") + "\"}}";
+            String rawMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            String safeMsg = rawMsg.replace("\\", "\\\\").replace("\"", "'").replace("\n", " ").replace("\r", " ");
+            String errJson = "{\"error\":{\"message\":\"" + safeMsg + "\"}}";
             byte[] errBytes = errJson.getBytes(StandardCharsets.UTF_8);
             String headerBlock = "HTTP/1.1 502 Bad Gateway\r\n" +
                     "Content-Type: application/json; charset=utf-8\r\n" +
                     "Content-Length: " + errBytes.length + "\r\n" +
+                    "Access-Control-Allow-Origin: *\r\n" +
                     "Connection: close\r\n\r\n";
             out.write(headerBlock.getBytes(StandardCharsets.UTF_8));
             out.write(errBytes);
@@ -246,6 +266,55 @@ public class LocalLoopbackServer {
                 conn.disconnect();
             }
         }
+    }
+
+    private static String httpStatusText(int status) {
+        switch (status) {
+            case 200: return "OK";
+            case 201: return "Created";
+            case 202: return "Accepted";
+            case 204: return "No Content";
+            case 400: return "Bad Request";
+            case 401: return "Unauthorized";
+            case 403: return "Forbidden";
+            case 404: return "Not Found";
+            case 413: return "Payload Too Large";
+            case 429: return "Too Many Requests";
+            case 500: return "Internal Server Error";
+            case 502: return "Bad Gateway";
+            case 503: return "Service Unavailable";
+            default: return "OK";
+        }
+    }
+
+    private static byte[] readChunkedBody(InputStream in) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(8192);
+        while (true) {
+            String sizeLine = readLine(in);
+            if (sizeLine == null) break;
+            int semi = sizeLine.indexOf(';');
+            if (semi >= 0) sizeLine = sizeLine.substring(0, semi);
+            sizeLine = sizeLine.trim();
+            if (sizeLine.isEmpty()) continue;
+            int chunkSize;
+            try {
+                chunkSize = Integer.parseInt(sizeLine, 16);
+            } catch (NumberFormatException e) {
+                break;
+            }
+            if (chunkSize <= 0) {
+                // Consume trailing headers/CRLF
+                while (true) {
+                    String trailer = readLine(in);
+                    if (trailer == null || trailer.isEmpty()) break;
+                }
+                break;
+            }
+            byte[] chunk = readExactBytes(in, chunkSize);
+            bos.write(chunk);
+            readLine(in); // trailing CRLF after chunk data
+        }
+        return bos.toByteArray();
     }
 
     private void proxyAndCacheMediaPipe(String pathOnly, String fullPath, OutputStream out) throws IOException {
